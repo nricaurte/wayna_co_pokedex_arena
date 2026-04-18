@@ -764,6 +764,90 @@ body.theme-holo .card:hover{
   .compare .vs{padding:0;transform:rotate(90deg)}
 }
 
+/* ===== World mode ===== */
+.world-wrap{
+  position:relative;margin-top:22px;border:1px solid var(--stroke);border-radius:18px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.3)), var(--panel);
+  padding:16px;overflow:hidden;
+}
+.world-header{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:12px;flex-wrap:wrap;
+}
+.world-zone-badge{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 14px;
+  border:1px solid var(--stroke-2);border-radius:999px;background:var(--bg-1);
+  font-family:var(--font-mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;
+}
+.world-zone-badge b{color:var(--accent);font-weight:700}
+.world-stats{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--font-mono);font-size:12px;color:var(--ink-dim)}
+.world-stats span{padding:6px 10px;border:1px solid var(--stroke);border-radius:8px;background:var(--bg-1)}
+.world-stats b{color:var(--ink);margin-left:6px}
+.world-canvas-wrap{
+  position:relative;width:100%;max-width:960px;margin:0 auto;aspect-ratio:16/9;
+  border-radius:14px;overflow:hidden;border:1px solid var(--stroke-2);
+  background:#050813;box-shadow:0 0 0 1px rgba(106,224,255,0.05) inset, 0 30px 60px -40px rgba(0,0,0,0.9);
+}
+.world-canvas{display:block;width:100%;height:100%;image-rendering:pixelated;outline:none}
+.world-hud{
+  position:absolute;left:12px;top:12px;padding:8px 12px;border-radius:10px;
+  background:rgba(7,10,20,0.75);backdrop-filter:blur(6px);
+  border:1px solid var(--stroke-2);font-family:var(--font-mono);font-size:11px;
+  color:var(--ink-dim);letter-spacing:0.08em;text-transform:uppercase;
+  display:flex;align-items:center;gap:10px;pointer-events:none;
+}
+.world-hud .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
+.world-hud b{color:var(--ink)}
+.world-controls-help{
+  position:absolute;right:12px;bottom:12px;padding:6px 10px;
+  background:rgba(7,10,20,0.75);backdrop-filter:blur(6px);border:1px solid var(--stroke);
+  border-radius:8px;font-family:var(--font-mono);font-size:10px;color:var(--ink-faint);
+  letter-spacing:0.06em;pointer-events:none;
+}
+.world-toast{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  padding:14px 22px;border-radius:12px;background:rgba(10,14,26,0.92);
+  border:1px solid var(--accent);color:var(--ink);font-family:var(--font-display);
+  font-weight:600;font-size:18px;letter-spacing:0.04em;
+  box-shadow:0 0 30px rgba(106,224,255,0.3), inset 0 0 0 1px rgba(255,255,255,0.05);
+  animation:wToastIn 0.3s cubic-bezier(.2,.8,.2,1);pointer-events:none;
+}
+@keyframes wToastIn{from{opacity:0;transform:translate(-50%,-40%) scale(0.9)} to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.world-flash{
+  position:absolute;inset:0;background:#fff;pointer-events:none;
+  animation:wFlash 0.45s ease-out forwards;
+}
+@keyframes wFlash{0%{opacity:0} 30%{opacity:0.6} 100%{opacity:0}}
+
+/* Starter picker */
+.starter-wrap{
+  margin-top:22px;padding:28px;border:1px solid var(--stroke);border-radius:18px;
+  background:linear-gradient(180deg, rgba(106,224,255,0.04), rgba(255,77,166,0.03)), var(--panel);
+}
+.starter-title{font-family:var(--font-display);font-size:32px;letter-spacing:-0.02em;margin:0 0 6px}
+.starter-lead{color:var(--ink-dim);margin:0 0 22px}
+.starter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:780px){.starter-grid{grid-template-columns:1fr}}
+.starter-card{
+  border:1px solid var(--stroke-2);border-radius:14px;padding:18px;cursor:pointer;
+  background:var(--bg-1);transition:all 0.2s ease;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.starter-card:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 10px 30px -15px rgba(106,224,255,0.5)}
+.starter-card img{width:130px;height:130px;object-fit:contain;filter:drop-shadow(0 8px 20px rgba(0,0,0,0.5))}
+.starter-name{font-family:var(--font-display);font-weight:600;font-size:18px;text-transform:capitalize}
+.starter-id{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint)}
+.starter-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.starter-actions button{
+  padding:10px 18px;border-radius:10px;border:1px solid var(--stroke-2);
+  background:var(--bg-1);color:var(--ink);font-family:var(--font-mono);font-size:12px;
+  letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;
+}
+.starter-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.starter-actions button.primary{background:var(--accent);color:var(--bg-0);border-color:var(--accent)}
+.starter-actions button.primary:hover{background:var(--ink);border-color:var(--ink)}
+.starter-actions button.danger:hover{border-color:var(--bad);color:var(--bad)}
+
 </style>
 </head>
 <body>
@@ -832,6 +916,23 @@ const I18N = {
     denseDense: "Denso",
     loading: "Cargando datos desde PokéAPI…",
     featured: "DESTACADO",
+    tabWorld: "Mundo",
+    worldStarterTitle: "Elige tu compañero",
+    worldStarterLead: "Un viaje comienza con una sola elección. ¿Quién te acompañará?",
+    worldNewGame: "Nueva aventura",
+    worldContinue: "Continuar",
+    worldDeleteSave: "Borrar partida",
+    worldControls: "Mueve con WASD o flechas. Pisa la hierba alta para encontrar Pokémon salvajes.",
+    worldEncounter: "¡Algo se mueve en la hierba!",
+    worldFirstSight: "¡Has visto por primera vez a",
+    worldParty: "Compañero",
+    worldSteps: "Pasos",
+    worldSeen: "Vistos",
+    zoneTown: "Pueblo Inicial",
+    zoneRoute1: "Ruta 1",
+    zoneForest: "Bosque Umbrío",
+    zoneCave: "Cueva Cristal",
+    zoneBeach: "Costa Cyan",
   },
   en: {
     tagline: "POKÉ EXPLORER · GEN I",
@@ -880,6 +981,23 @@ const I18N = {
     denseDense: "Dense",
     loading: "Fetching data from PokéAPI…",
     featured: "FEATURED",
+    tabWorld: "World",
+    worldStarterTitle: "Choose your partner",
+    worldStarterLead: "Every journey starts with a single choice. Who joins you?",
+    worldNewGame: "New adventure",
+    worldContinue: "Continue",
+    worldDeleteSave: "Delete save",
+    worldControls: "Move with WASD or arrow keys. Step into tall grass to find wild Pokémon.",
+    worldEncounter: "Something rustles in the grass!",
+    worldFirstSight: "You spotted a wild",
+    worldParty: "Partner",
+    worldSteps: "Steps",
+    worldSeen: "Seen",
+    zoneTown: "Starter Town",
+    zoneRoute1: "Route 1",
+    zoneForest: "Umbra Woods",
+    zoneCave: "Crystal Cave",
+    zoneBeach: "Cyan Shore",
   },
 };
 window.I18N = I18N;
@@ -1949,6 +2067,585 @@ window.TweaksPanel = TweaksPanel;
 
 </script>
 <script type="text/babel">
+// World mode — 2D top-down overworld with wild encounters
+const { useState: useStateW, useEffect: useEffectW, useRef: useRefW, useMemo: useMemoW } = React;
+
+const WORLD_SAVE_KEY = "pokedex_arena_world_v1";
+const TILE = 40;
+const MAP_W = 20;
+const MAP_H = 14;
+
+// Tile legend:
+//   . = ground   g = grass (encounter)   T = tree   R = rock   H = house
+//   ~ = water   S = sand   p = path      : = cave floor
+// Exits are positioned at specific tiles (defined separately).
+const WORLD_MAPS = {
+  town: {
+    name: "zoneTown",
+    biome: [],
+    bg: "#203a2b",
+    grassColor: "#4e7f4a",
+    pathColor: "#b8a071",
+    tiles: [
+      "TTTTTTTTTTTTTTTTTTTT",
+      "T..................T",
+      "T..HH..HH..HH..HH..T",
+      "T..HH..HH..HH..HH..T",
+      "T..................T",
+      "T....pppppppppp....T",
+      "T....p........p....T",
+      "T....p........p....T",
+      "T....p........p....T",
+      "T....pppppppppp....T",
+      "T..................T",
+      "T..HH..HH..HH..HH..T",
+      "T........pp........T",
+      "TTTTTTTTTpp TTTTTTTT",
+    ],
+    exits: [{ x:9, y:13, to:"route1", tx:10, ty:0 },{ x:10, y:13, to:"route1", tx:10, ty:0 }],
+    spawn: { x:10, y:6 },
+  },
+  route1: {
+    name: "zoneRoute1",
+    biome: ["normal","flying","bug"],
+    bg: "#1e2f1e",
+    grassColor: "#5aa256",
+    pathColor: "#b8a071",
+    tiles: [
+      "TTTTTTTTTTppTTTTTTTT",
+      "TggggTTgggppgggTTTTT",
+      "TggggTTgggppgggTTTTT",
+      "TggggggggpppggggTTTT",
+      "TggTTggggpppgggggggT",
+      "TggTTggppppppggggggT",
+      "Tggggggp....pgggTTTT",
+      "Tgggggpp....pgggggTT",
+      "Tgg..ppp....pppggggT",
+      "Tgg..p.........pggT.",
+      "Tggggp.........p...g",
+      "TggggpppgggggpppggT.",
+      "TgggggggggTTggggggTT",
+      "TTTTTTTTTTTTTTTTTTTT",
+    ],
+    exits: [
+      { x:10, y:0, to:"town", tx:10, ty:12 },
+      { x:19, y:9, to:"forest", tx:0, ty:7 },
+      { x:19, y:10, to:"forest", tx:0, ty:7 },
+    ],
+    spawn: { x:10, y:1 },
+  },
+  forest: {
+    name: "zoneForest",
+    biome: ["bug","grass","poison"],
+    bg: "#11221a",
+    grassColor: "#3d7a3a",
+    pathColor: "#85604a",
+    tiles: [
+      "TTTTTTTTTTTTTTTTTTTT",
+      "TgggTTggggggggTTTggT",
+      "TggggTggggggggTggggT",
+      "TggggggTTggggTggggggg",
+      "Tggp.ggggggggggggggT",
+      "Tggp..ggggTTgggggggT",
+      "Tggp..ggggTTggggggT.",
+      "..gpp.ggggggggggggT.",
+      "Tggggp.gggggggggggT.",
+      "TggTTpp.ggggTTggggT.",
+      "TggTTgppggggTTgggggg",
+      "Tggggggppppppggggggg",
+      "TTggggggggggppgggTTT",
+      "TTTTTTTTTTTTppTTTTTT",
+    ],
+    exits: [
+      { x:0, y:7, to:"route1", tx:18, ty:9 },
+      { x:12, y:13, to:"cave", tx:10, ty:0 },
+      { x:13, y:13, to:"cave", tx:10, ty:0 },
+    ],
+    spawn: { x:1, y:7 },
+  },
+  cave: {
+    name: "zoneCave",
+    biome: ["rock","ground","psychic"],
+    bg: "#1a1626",
+    grassColor: "#5a4a7a",
+    pathColor: "#3a3354",
+    tiles: [
+      "RRRRRRRRRRppRRRRRRRR",
+      "R::::RRR::pp::RRRR::",
+      "R::g:RR:::pp::::RRR:",
+      "R::g::::::pp::::::R:",
+      "R:::::RRR::::RR:::RR",
+      "R::gg:RRR:gg:RRR::RR",
+      "R::gg::::::gg:::::RR",
+      "R:::::::RRR:::::::RR",
+      "R::::gg::RR:::gg::RR",
+      "R::RR::::::::RR:::RR",
+      "R::RR::gggg::RR::gRR",
+      "R::::::gggg::::::gRR",
+      "RR::::::::::::::::RR",
+      "RRRRRRRRRppRRRRRRRRR",
+    ],
+    exits: [
+      { x:10, y:0, to:"forest", tx:12, ty:12 },
+      { x:9, y:13, to:"beach", tx:10, ty:0 },
+      { x:10, y:13, to:"beach", tx:10, ty:0 },
+    ],
+    spawn: { x:10, y:1 },
+  },
+  beach: {
+    name: "zoneBeach",
+    biome: ["water","ice"],
+    bg: "#143046",
+    grassColor: "#e8d190",
+    pathColor: "#f2e0a8",
+    tiles: [
+      "RRRRRRRRRpppRRRRRRRR",
+      "RSSSSSSSSpppSSSSSSSS",
+      "SSSSggSSSSSSSSggSSSS",
+      "SSSSSSSSSSSSSSSSSSSS",
+      "SSggSSSSSSSSSSSSggSS",
+      "SSSSSSSS~~~~SSSSSSSS",
+      "SSSSSS~~~~~~~~SSSSSS",
+      "SSSS~~~~~~~~~~~~SSSS",
+      "SS~~~~~~~~~~~~~~~~SS",
+      "~~~~~~~~~~~~~~~~~~~~",
+      "~~~~~~~~~~~~~~~~~~~~",
+      "~~~~~~~~~~~~~~~~~~~~",
+      "~~~~~~~~~~~~~~~~~~~~",
+      "~~~~~~~~~~~~~~~~~~~~",
+    ],
+    exits: [
+      { x:9, y:0, to:"cave", tx:9, ty:12 },
+      { x:10, y:0, to:"cave", tx:10, ty:12 },
+      { x:11, y:0, to:"cave", tx:10, ty:12 },
+    ],
+    spawn: { x:10, y:1 },
+  },
+};
+
+function isWalkable(tile){
+  return tile === "." || tile === "g" || tile === "p" || tile === "S" || tile === ":" || tile === " ";
+}
+function isGrass(tile){ return tile === "g"; }
+
+function tileAt(map, x, y){
+  if (x<0||y<0||y>=map.tiles.length) return "T";
+  const row = map.tiles[y];
+  if (x>=row.length) return "T";
+  return row[x] || "T";
+}
+
+function loadWorldSave(){
+  try{
+    const raw = localStorage.getItem(WORLD_SAVE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (!s || !s.party || !s.pos) return null;
+    return s;
+  }catch(e){ return null; }
+}
+function saveWorldSave(s){
+  try{ localStorage.setItem(WORLD_SAVE_KEY, JSON.stringify(s)); }catch(e){}
+}
+function clearWorldSave(){ try{ localStorage.removeItem(WORLD_SAVE_KEY); }catch(e){} }
+
+function pickWildPokemon(allPokemon, biome){
+  if (!allPokemon || allPokemon.length === 0 || !biome || biome.length === 0) return null;
+  const pool = allPokemon.filter(p => p.types.some(tp => biome.includes(tp)));
+  const src = pool.length > 0 ? pool : allPokemon;
+  return src[Math.floor(Math.random()*src.length)];
+}
+
+function StarterPicker({ allPokemon, lang, existingSave, onStart, onContinue, onDelete }){
+  const t = window.I18N[lang];
+  const starters = useMemoW(() => {
+    return [1,4,7].map(id => allPokemon.find(p => p.id === id)).filter(Boolean);
+  }, [allPokemon]);
+  if (starters.length < 3){
+    return <div className="starter-wrap"><p style={{color:"var(--ink-dim)"}}>{t.loading}</p></div>;
+  }
+  return (
+    <div className="starter-wrap">
+      <div className="hero-kicker"><span className="pulse"/>{t.tabWorld.toUpperCase()} · NEW JOURNEY</div>
+      <h2 className="starter-title">{t.worldStarterTitle}</h2>
+      <p className="starter-lead">{t.worldStarterLead}</p>
+      <div className="starter-grid">
+        {starters.map(p => (
+          <div key={p.id} className="starter-card" onClick={()=>onStart(p)}>
+            <img src={p.sprite} alt={p.name}/>
+            <div className="starter-name">{p.name}</div>
+            <div className="starter-id">#{String(p.id).padStart(3,"0")} · {p.types.join(" · ")}</div>
+          </div>
+        ))}
+      </div>
+      {existingSave && (
+        <div className="starter-actions">
+          <button className="primary" onClick={onContinue}>▶ {t.worldContinue}</button>
+          <button className="danger" onClick={onDelete}>✕ {t.worldDeleteSave}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+window.StarterPicker = StarterPicker;
+
+function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen }){
+  const t = window.I18N[lang];
+  const canvasRef = useRefW(null);
+  const wrapRef = useRefW(null);
+  const [toast, setToast] = useStateW(null);
+  const [flash, setFlash] = useStateW(0);
+  const onEncounterRef = useRefW(onEncounter);
+  const allPokemonRef = useRefW(allPokemon);
+  useEffectW(() => { onEncounterRef.current = onEncounter; }, [onEncounter]);
+  useEffectW(() => { allPokemonRef.current = allPokemon; }, [allPokemon]);
+  useEffectW(() => {
+    // pause/unpause when battle overlay opens/closes
+    if (stateRef.current) stateRef.current.paused = !!battleOpen;
+    if (!battleOpen && canvasRef.current) canvasRef.current.focus();
+  }, [battleOpen]);
+
+  // Mutable gameplay state kept in refs (don't trigger re-renders on every frame)
+  const stateRef = useRefW({
+    zone: save.pos.zone,
+    px: save.pos.x,
+    py: save.pos.y,
+    tx: save.pos.x,
+    ty: save.pos.y,
+    moveT: 1,     // 0->1 tween progress
+    facing: "down",
+    steps: save.steps || 0,
+    seen: new Set(save.seen || []),
+    paused: false,
+    anim: 0,
+  });
+  const keysRef = useRefW({});
+
+  // Public zone label
+  const [zoneKey, setZoneKey] = useStateW(save.pos.zone);
+
+  // Persist periodically
+  useEffectW(() => {
+    const id = setInterval(() => {
+      const s = stateRef.current;
+      setSave(prev => {
+        const next = {
+          ...prev,
+          pos: { zone: s.zone, x: s.tx, y: s.ty },
+          steps: s.steps,
+          seen: Array.from(s.seen),
+        };
+        saveWorldSave(next);
+        return next;
+      });
+    }, 2500);
+    return () => clearInterval(id);
+  }, [setSave]);
+
+  useEffectW(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.focus();
+
+    const onDown = (e) => {
+      const k = e.key.toLowerCase();
+      keysRef.current[k] = true;
+      if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d"].includes(k)) e.preventDefault();
+    };
+    const onUp = (e) => { keysRef.current[e.key.toLowerCase()] = false; };
+    canvas.addEventListener("keydown", onDown);
+    canvas.addEventListener("keyup", onUp);
+
+    let raf;
+    let last = performance.now();
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width = 960;
+    const H = canvas.height = 540;
+
+    const tryMove = () => {
+      const s = stateRef.current;
+      if (s.moveT < 1 || s.paused) return;
+      const k = keysRef.current;
+      let dx = 0, dy = 0, facing = s.facing;
+      if (k["arrowup"] || k["w"]) { dy = -1; facing = "up"; }
+      else if (k["arrowdown"] || k["s"]) { dy = 1; facing = "down"; }
+      else if (k["arrowleft"] || k["a"]) { dx = -1; facing = "left"; }
+      else if (k["arrowright"] || k["d"]) { dx = 1; facing = "right"; }
+      if (!dx && !dy) return;
+      s.facing = facing;
+      const nx = s.tx + dx, ny = s.ty + dy;
+      const map = WORLD_MAPS[s.zone];
+
+      // Exit?
+      const exit = map.exits.find(e => e.x === nx && e.y === ny);
+      if (exit){
+        s.paused = true;
+        setFlash(f => f + 1);
+        setTimeout(() => {
+          s.zone = exit.to;
+          s.tx = s.px = exit.tx;
+          s.ty = s.py = exit.ty;
+          s.moveT = 1;
+          s.paused = false;
+          setZoneKey(exit.to);
+        }, 230);
+        return;
+      }
+
+      // Blocked?
+      const tile = tileAt(map, nx, ny);
+      if (!isWalkable(tile)) return;
+
+      s.px = s.tx; s.py = s.ty;
+      s.tx = nx; s.ty = ny;
+      s.moveT = 0;
+      s.steps += 1;
+
+      // Encounter check after landing handled on moveT complete
+    };
+
+    const onMoveComplete = () => {
+      const s = stateRef.current;
+      const map = WORLD_MAPS[s.zone];
+      const tile = tileAt(map, s.tx, s.ty);
+      if (isGrass(tile) && map.biome.length > 0 && Math.random() < 0.12){
+        const wild = pickWildPokemon(allPokemonRef.current, map.biome);
+        if (wild){
+          const firstTime = !s.seen.has(wild.name);
+          s.seen.add(wild.name);
+          s.paused = true;
+          setToast(t.worldEncounter);
+          setFlash(f => f + 1);
+          setTimeout(() => {
+            setToast(null);
+            onEncounterRef.current(wild, firstTime);
+          }, 650);
+        }
+      }
+    };
+
+    const drawTile = (tile, x, y, map, animFrame) => {
+      const px = x * TILE, py = y * TILE;
+      // base
+      ctx.fillStyle = map.bg;
+      ctx.fillRect(px, py, TILE, TILE);
+
+      if (tile === "T"){
+        // tree
+        ctx.fillStyle = "#1a2e1a";
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = "#2f5a2b";
+        ctx.beginPath();
+        ctx.arc(px + TILE/2, py + TILE/2, TILE*0.42, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = "#1c3a1c";
+        ctx.fillRect(px + TILE*0.42, py + TILE*0.7, TILE*0.16, TILE*0.25);
+      } else if (tile === "R"){
+        ctx.fillStyle = "#2a2a3a";
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = "#4a4a5e";
+        ctx.beginPath();
+        ctx.arc(px + TILE/2, py + TILE/2, TILE*0.38, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = "#60607a";
+        ctx.beginPath();
+        ctx.arc(px + TILE*0.4, py + TILE*0.4, TILE*0.14, 0, Math.PI*2);
+        ctx.fill();
+      } else if (tile === "H"){
+        ctx.fillStyle = "#4a3b2a";
+        ctx.fillRect(px+2, py+TILE*0.3, TILE-4, TILE*0.7-2);
+        ctx.fillStyle = "#7a4a3a";
+        ctx.beginPath();
+        ctx.moveTo(px, py + TILE*0.35);
+        ctx.lineTo(px + TILE/2, py + 4);
+        ctx.lineTo(px + TILE, py + TILE*0.35);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#2a1e14";
+        ctx.fillRect(px + TILE*0.4, py + TILE*0.6, TILE*0.2, TILE*0.4);
+      } else if (tile === "g"){
+        ctx.fillStyle = map.grassColor;
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.strokeStyle = "rgba(0,0,0,0.2)";
+        ctx.lineWidth = 1;
+        for (let i=0;i<5;i++){
+          const gx = px + (i*7 + (x*13)%7) % (TILE-4) + 2;
+          const gy = py + TILE*0.5 + ((i*5 + (y*7)%5) % (TILE*0.4));
+          ctx.beginPath();
+          ctx.moveTo(gx, gy + 4);
+          ctx.lineTo(gx, gy - 3);
+          ctx.stroke();
+        }
+      } else if (tile === "p"){
+        ctx.fillStyle = map.pathColor;
+        ctx.fillRect(px, py, TILE, TILE);
+      } else if (tile === "~"){
+        const shimmer = Math.sin(animFrame * 0.04 + x*0.6 + y*0.3) * 0.1;
+        ctx.fillStyle = `rgb(${40 + shimmer*60}, ${90 + shimmer*40}, ${160 + shimmer*30})`;
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px + 4, py + TILE*0.4 + shimmer*6);
+        ctx.lineTo(px + TILE - 4, py + TILE*0.4 + shimmer*6);
+        ctx.stroke();
+      } else if (tile === "S"){
+        ctx.fillStyle = "#e4c98a";
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = "rgba(0,0,0,0.06)";
+        ctx.fillRect(px + (x*13)%TILE, py + (y*7)%TILE, 2, 2);
+      } else if (tile === ":"){
+        ctx.fillStyle = map.pathColor;
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = "rgba(255,255,255,0.04)";
+        ctx.fillRect(px + (x*11)%TILE, py + (y*13)%TILE, 3, 1);
+      } else {
+        // "."
+        ctx.fillStyle = map.bg;
+        ctx.fillRect(px, py, TILE, TILE);
+      }
+    };
+
+    const drawPlayer = (cx, cy) => {
+      const s = stateRef.current;
+      // shadow
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + TILE*0.35, TILE*0.28, TILE*0.1, 0, 0, Math.PI*2);
+      ctx.fill();
+      // body
+      ctx.fillStyle = "#6ae0ff";
+      ctx.beginPath();
+      ctx.arc(cx, cy, TILE*0.3, 0, Math.PI*2);
+      ctx.fill();
+      // outline
+      ctx.strokeStyle = "#0a0e1a";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // facing indicator
+      const dirs = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
+      const [dx, dy] = dirs[s.facing] || [0,1];
+      ctx.fillStyle = "#0a0e1a";
+      ctx.beginPath();
+      ctx.arc(cx + dx * TILE*0.15, cy + dy * TILE*0.15, TILE*0.07, 0, Math.PI*2);
+      ctx.fill();
+      // glow pulse
+      const p = (Math.sin(s.anim * 0.08) + 1) / 2;
+      ctx.strokeStyle = `rgba(106,224,255,${0.2 + p*0.3})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, TILE*0.36 + p*3, 0, Math.PI*2);
+      ctx.stroke();
+    };
+
+    const loop = (now) => {
+      raf = requestAnimationFrame(loop);
+      const dt = Math.min(40, now - last);
+      last = now;
+      const s = stateRef.current;
+      s.anim += 1;
+
+      // Advance tween
+      if (s.moveT < 1){
+        s.moveT = Math.min(1, s.moveT + dt / 180);
+        if (s.moveT >= 1){
+          s.px = s.tx; s.py = s.ty;
+          onMoveComplete();
+        }
+      } else if (!s.paused){
+        tryMove();
+      }
+
+      const map = WORLD_MAPS[s.zone];
+      const px = s.px + (s.tx - s.px) * s.moveT;
+      const py = s.py + (s.ty - s.py) * s.moveT;
+
+      // Camera
+      const camX = px * TILE + TILE/2 - W/2;
+      const camY = py * TILE + TILE/2 - H/2;
+
+      // Clear + bg
+      ctx.fillStyle = map.bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // Tiles visible
+      ctx.save();
+      ctx.translate(-camX, -camY);
+      const minX = Math.max(0, Math.floor(camX / TILE) - 1);
+      const maxX = Math.min(MAP_W - 1, Math.ceil((camX + W) / TILE));
+      const minY = Math.max(0, Math.floor(camY / TILE) - 1);
+      const maxY = Math.min(MAP_H - 1, Math.ceil((camY + H) / TILE));
+      for (let y = minY; y <= maxY; y++){
+        for (let x = minX; x <= maxX; x++){
+          drawTile(tileAt(map, x, y), x, y, map, s.anim);
+        }
+      }
+      // Exits
+      map.exits.forEach(e => {
+        const ex = e.x * TILE, ey = e.y * TILE;
+        ctx.strokeStyle = "rgba(106,224,255,0.6)";
+        ctx.lineWidth = 2;
+        const pulse = (Math.sin(s.anim * 0.08) + 1) / 2;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(ex + 2, ey + 2, TILE - 4, TILE - 4);
+        ctx.setLineDash([]);
+        ctx.fillStyle = `rgba(106,224,255,${0.08 + pulse*0.08})`;
+        ctx.fillRect(ex, ey, TILE, TILE);
+      });
+
+      // Player
+      drawPlayer(px * TILE + TILE/2, py * TILE + TILE/2);
+
+      // Vignette
+      ctx.restore();
+      const grad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.35, W/2, H/2, Math.max(W,H)*0.7);
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(1, "rgba(0,0,0,0.55)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    };
+
+    raf = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(raf);
+      canvas.removeEventListener("keydown", onDown);
+      canvas.removeEventListener("keyup", onUp);
+    };
+  }, []);
+
+  const zoneName = t[WORLD_MAPS[zoneKey].name] || zoneKey;
+  const seenCount = (save.seen || []).length;
+
+  return (
+    <div className="world-wrap" ref={wrapRef}>
+      <div className="world-header">
+        <div className="world-zone-badge">
+          <span>◈</span><b>{zoneName}</b>
+        </div>
+        <div className="world-stats">
+          <span>{t.worldParty}<b>{save.party[0]?.name || "—"}</b></span>
+          <span>{t.worldSteps}<b>{save.steps || 0}</b></span>
+          <span>{t.worldSeen}<b>{seenCount}/151</b></span>
+        </div>
+      </div>
+      <div className="world-canvas-wrap">
+        <canvas ref={canvasRef} className="world-canvas" tabIndex={0}/>
+        <div className="world-hud"><span className="dot"/><b>{zoneName}</b></div>
+        <div className="world-controls-help">{t.worldControls}</div>
+        {toast && <div className="world-toast">{toast}</div>}
+        {flash > 0 && <div className="world-flash" key={flash}/>}
+      </div>
+    </div>
+  );
+}
+window.WorldView = WorldView;
+window.WORLD_MAPS = WORLD_MAPS;
+window.loadWorldSave = loadWorldSave;
+window.saveWorldSave = saveWorldSave;
+window.clearWorldSave = clearWorldSave;
+
+</script>
+<script type="text/babel">
 // Main app: layout, state, data fetch, filters, search, grid + detail + compare
 const { useState, useEffect, useMemo, useRef } = React;
 
@@ -2001,6 +2698,9 @@ function App(){
   const [sortBy, setSortBy] = useState("id");
   const [detail, setDetail] = useState(null);
   const [featuredIdx, setFeaturedIdx] = useState(0);
+  const [worldSave, setWorldSave] = useState(() => (window.loadWorldSave ? window.loadWorldSave() : null));
+  const [worldBattle, setWorldBattle] = useState(null);
+  const [worldToast, setWorldToast] = useState(null);
 
   const t = window.I18N[lang];
 
@@ -2103,6 +2803,7 @@ function App(){
         <div className="nav">
           <button className={tab==="explore"?"on":""} onClick={()=>setTab("explore")}>◆ {t.tabExplore}</button>
           <button className={tab==="compare"?"on":""} onClick={()=>setTab("compare")}>⇋ {t.tabCompare}</button>
+          <button className={tab==="world"?"on":""} onClick={()=>setTab("world")}>⬢ {t.tabWorld}</button>
         </div>
         <div className="spacer"/>
         <div className="lang">
@@ -2233,6 +2934,68 @@ function App(){
           </div>
           <window.CompareView allPokemon={pokemon} lang={lang}/>
         </div>
+      )}
+
+      {tab === "world" && (
+        <>
+          {pokemon.length < 151 && (
+            <div className="starter-wrap">
+              <p style={{color:"var(--ink-dim)",margin:0}}>{t.loading} ({loadProgress}%)</p>
+            </div>
+          )}
+          {pokemon.length >= 151 && !worldSave && (
+            <window.StarterPicker
+              allPokemon={pokemon} lang={lang} existingSave={null}
+              onStart={(starter) => {
+                const fresh = {
+                  party: [starter],
+                  pos: { zone: "town", x: window.WORLD_MAPS.town.spawn.x, y: window.WORLD_MAPS.town.spawn.y },
+                  steps: 0,
+                  seen: [starter.name],
+                };
+                window.saveWorldSave(fresh);
+                setWorldSave(fresh);
+              }}/>
+          )}
+          {pokemon.length >= 151 && worldSave && (
+            <window.WorldView
+              allPokemon={pokemon} lang={lang} save={worldSave} setSave={setWorldSave}
+              battleOpen={!!worldBattle}
+              onEncounter={(wild, firstSight) => {
+                if (firstSight) {
+                  setWorldToast(`${t.worldFirstSight} ${wild.name}!`);
+                  setTimeout(()=>setWorldToast(null), 2200);
+                }
+                setWorldBattle({ a: worldSave.party[0], b: wild });
+              }}/>
+          )}
+          {pokemon.length >= 151 && worldSave && (
+            <div style={{display:"flex",gap:10,marginTop:14,justifyContent:"center",flexWrap:"wrap"}}>
+              <button className="starter-card" style={{padding:"8px 16px",fontSize:12,cursor:"pointer",border:"1px solid var(--stroke-2)",borderRadius:10,background:"var(--bg-1)",color:"var(--ink-dim)",fontFamily:"var(--font-mono)",letterSpacing:"0.08em",textTransform:"uppercase"}}
+                onClick={() => {
+                  if (confirm(lang==="es"?"¿Borrar partida?":"Delete save?")) {
+                    window.clearWorldSave();
+                    setWorldSave(null);
+                  }
+                }}>✕ {t.worldDeleteSave}</button>
+            </div>
+          )}
+        </>
+      )}
+
+      {worldBattle && (
+        <window.BattleArena
+          a={worldBattle.a} b={worldBattle.b} lang={lang}
+          onClose={()=>setWorldBattle(null)}/>
+      )}
+      {worldToast && (
+        <div style={{
+          position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",
+          padding:"12px 22px",background:"rgba(10,14,26,0.95)",border:"1px solid var(--accent)",
+          borderRadius:12,color:"var(--ink)",fontFamily:"var(--font-display)",fontWeight:600,
+          fontSize:16,letterSpacing:"0.02em",textTransform:"capitalize",zIndex:100,
+          boxShadow:"0 0 30px rgba(106,224,255,0.3)"
+        }}>✦ {worldToast}</div>
       )}
 
       {detail && <window.DetailModal p={detail} onClose={()=>setDetail(null)}
