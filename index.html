@@ -829,6 +829,23 @@ body.theme-holo .card:hover{
   animation:wFlash 0.45s ease-out forwards;
 }
 @keyframes wFlash{0%{opacity:0} 30%{opacity:0.6} 100%{opacity:0}}
+.npc-dialog{
+  position:absolute;left:50%;bottom:52px;transform:translateX(-50%);
+  min-width:280px;max-width:72%;padding:12px 16px 14px;
+  background:rgba(10,14,26,0.94);border:1px solid var(--accent);border-radius:12px;
+  color:var(--ink);box-shadow:0 0 24px rgba(106,224,255,0.25);
+  font-family:var(--font-body);font-size:14px;line-height:1.45;
+  pointer-events:none;animation:wToastIn 0.25s cubic-bezier(.2,.8,.2,1);
+}
+.npc-dialog .name{
+  display:block;font-family:var(--font-display);font-weight:700;font-size:13px;
+  letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;
+}
+.npc-dialog .tail{
+  position:absolute;left:50%;bottom:-7px;transform:translateX(-50%) rotate(45deg);
+  width:12px;height:12px;background:rgba(10,14,26,0.94);
+  border-right:1px solid var(--accent);border-bottom:1px solid var(--accent);
+}
 
 /* Starter picker */
 .starter-wrap{
@@ -2249,6 +2266,47 @@ const WORLD_MAPS = {
   },
 };
 
+// NPCs: anime-style trainers placed around the world. Sprites from
+// Pokémon Showdown's trainer collection. Dialog shows when the player
+// gets close (< ~2.5 world units).
+const NPCS = [
+  {
+    id: "ash", zone: "town", tile: { x: 7, y: 4 }, scale: 1.9,
+    sprite: "https://images.weserv.nl/?url=play.pokemonshowdown.com/sprites/trainers/ash.png",
+    name_es: "Ash", name_en: "Ash",
+    line_es: "¡Algún día seré el mejor entrenador Pokémon del mundo!",
+    line_en: "One day I'll be the world's greatest Pokémon trainer!",
+  },
+  {
+    id: "oak", zone: "town", tile: { x: 13, y: 4 }, scale: 1.95,
+    sprite: "https://images.weserv.nl/?url=play.pokemonshowdown.com/sprites/trainers/oak.png",
+    name_es: "Prof. Oak", name_en: "Prof. Oak",
+    line_es: "¡Buena elección de compañero, joven entrenador!",
+    line_en: "A fine choice of partner, young trainer!",
+  },
+  {
+    id: "misty", zone: "route1", tile: { x: 8, y: 9 }, scale: 1.85,
+    sprite: "https://images.weserv.nl/?url=play.pokemonshowdown.com/sprites/trainers/misty.png",
+    name_es: "Misty", name_en: "Misty",
+    line_es: "Los Pokémon de agua son los más hermosos. ¿Aún no has visto a Staryu?",
+    line_en: "Water Pokémon are the most beautiful. Haven't met Staryu yet?",
+  },
+  {
+    id: "brock", zone: "cave", tile: { x: 5, y: 6 }, scale: 1.9,
+    sprite: "https://images.weserv.nl/?url=play.pokemonshowdown.com/sprites/trainers/brock.png",
+    name_es: "Brock", name_en: "Brock",
+    line_es: "Los tipo roca son duros de pelar. Entrena bien antes de desafiarme.",
+    line_en: "Rock-types are tough. Train up before you challenge me.",
+  },
+  {
+    id: "misty_beach", zone: "beach", tile: { x: 4, y: 4 }, scale: 1.85,
+    sprite: "https://images.weserv.nl/?url=play.pokemonshowdown.com/sprites/trainers/misty.png",
+    name_es: "Misty", name_en: "Misty",
+    line_es: "Aquí encuentro a los mejores Pokémon de agua. ¡Prueba en la orilla!",
+    line_en: "The best water Pokémon live here. Try the shoreline!",
+  },
+];
+
 function isWalkable(tile){
   return tile === "." || tile === "g" || tile === "p" || tile === "S" || tile === ":" || tile === " ";
 }
@@ -2328,6 +2386,7 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
   const canvasRef = useRefW(null);
   const wrapRef = useRefW(null);
   const [toast, setToast] = useStateW(null);
+  const [nearNpc, setNearNpc] = useStateW(null);
   const [flash, setFlash] = useStateW(0);
   const [zoneKey, setZoneKey] = useStateW(save.pos.zone);
   const [threeReady, setThreeReady] = useStateW(!!window.THREE);
@@ -2335,6 +2394,7 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
 
   const onEncounterRef = useRefW(onEncounter);
   const allPokemonRef = useRefW(allPokemon);
+  const nearNpcRef = useRefW(null);
   const stateRef = useRefW({
     zone: save.pos.zone,
     wx: (save.pos.x - MAP_W / 2) * 2 + 1,
@@ -2456,36 +2516,40 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
     pokeSprite.position.y = SPRITE_H / 2 + 0.05; // feet touch the ground
     playerGroup.add(pokeSprite);
 
-    // Load the starter's sprite texture. Prefer the hi-res official artwork;
-    // fall back to the small 96px sprite if that fails.
-    const spriteUrl = save.party?.[0]?.sprite || save.party?.[0]?.spriteSmall;
-    if (spriteUrl) {
-      const loader = new THREE.TextureLoader();
-      loader.setCrossOrigin("anonymous");
-      loader.load(
-        spriteUrl,
-        (tex) => {
+    // Load the starter's sprite — prefer the Gen V animated GIF (browser
+    // decodes the animation natively), fall back to static official art.
+    let animatedTex = null;
+    const partyPoke = save.party?.[0];
+    if (partyPoke) {
+      const animUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/" + partyPoke.id + ".gif";
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const tex = new THREE.Texture(img);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.magFilter = THREE.NearestFilter; // crisp pixel look
+        tex.minFilter = THREE.NearestFilter;
+        tex.needsUpdate = true;
+        animatedTex = tex;
+        spriteMat.map = tex;
+        spriteMat.needsUpdate = true;
+      };
+      img.onerror = () => {
+        // Fallback: static hi-res artwork
+        const staticUrl = partyPoke.sprite || partyPoke.spriteSmall;
+        if (!staticUrl) return;
+        const loader = new THREE.TextureLoader();
+        loader.setCrossOrigin("anonymous");
+        loader.load(staticUrl, (tex) => {
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.magFilter = THREE.LinearFilter;
           tex.minFilter = THREE.LinearMipmapLinearFilter;
           tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
           spriteMat.map = tex;
           spriteMat.needsUpdate = true;
-        },
-        undefined,
-        () => {
-          // Fallback to pixel sprite
-          const small = save.party?.[0]?.spriteSmall;
-          if (small && small !== spriteUrl) {
-            loader.load(small, (tex) => {
-              tex.colorSpace = THREE.SRGBColorSpace;
-              tex.magFilter = THREE.NearestFilter;
-              spriteMat.map = tex;
-              spriteMat.needsUpdate = true;
-            });
-          }
-        }
-      );
+        });
+      };
+      img.src = animUrl;
     }
 
     // Shadow disc under player (sprites don't cast real shadows, so this
@@ -2736,8 +2800,58 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
           }
         }
       }
+
+      // --- NPCs for this zone ---
+      npcList.length = 0;
+      NPCS.filter(n => n.zone === zoneName).forEach(npc => {
+        const wx = (npc.tile.x - MAP_W / 2) * 2 + 1;
+        const wz = (npc.tile.y - MAP_H / 2) * 2 + 1;
+        const h = npc.scale || 1.8;
+        const mat = new THREE.SpriteMaterial({
+          transparent: true, depthTest: true, alphaTest: 0.1, color: 0xffffff,
+        });
+        const sp = new THREE.Sprite(mat);
+        sp.scale.set(h, h, 1);
+        sp.position.set(wx, h / 2 + 0.05, wz);
+        zoneGroup.add(sp);
+        // Small shadow disc
+        const disc = new THREE.Mesh(
+          new THREE.CircleGeometry(0.5, 24),
+          new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false })
+        );
+        disc.rotation.x = -Math.PI / 2;
+        disc.position.set(wx, 0.03, wz);
+        zoneGroup.add(disc);
+        // Sparkle indicator (small pulsing ring at feet so NPCs are noticeable)
+        const spark = new THREE.Mesh(
+          new THREE.TorusGeometry(0.55, 0.04, 8, 20),
+          new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.7 })
+        );
+        spark.position.set(wx, 0.1, wz);
+        spark.rotation.x = Math.PI / 2;
+        spark.userData.sparkle = true;
+        zoneGroup.add(spark);
+
+        // Load sprite texture (trainers don't have a tiny version; just try)
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const tex = new THREE.Texture(img);
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.magFilter = THREE.NearestFilter;
+          tex.minFilter = THREE.NearestFilter;
+          tex.needsUpdate = true;
+          mat.map = tex;
+          mat.needsUpdate = true;
+        };
+        img.onerror = () => { /* silently skip if Showdown URL fails */ };
+        img.src = npc.sprite;
+
+        npcList.push({ npc, sprite: sp, spark, wx, wz, baseY: h / 2 + 0.05 });
+      });
     }
 
+    const npcList = [];
     buildZone(stateRef.current.zone);
 
     // Debug handles (safe to expose; used by e2e tests)
@@ -2887,9 +3001,22 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
 
       playerGroup.position.set(s.wx, 0, s.wz);
       playerGroup.rotation.y = s.facing;
-      // Sprite bob when walking
-      const bob = s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.08 : 0;
-      pokeSprite.position.y = (SPRITE_H / 2 + 0.05) + bob;
+      // Push latest GIF frame to the GPU (browser advances the <img>).
+      if (animatedTex) animatedTex.needsUpdate = true;
+      // Procedural life: bigger bob when moving, gentle idle breathing
+      // otherwise, plus a subtle squash/stretch on each step.
+      if (s.moving) {
+        const phase = elapsed * 11;
+        const bob = Math.abs(Math.sin(phase)) * 0.12;
+        const squash = 1 - Math.abs(Math.sin(phase)) * 0.06;
+        const stretch = 1 + Math.abs(Math.sin(phase)) * 0.06;
+        pokeSprite.position.y = (SPRITE_H / 2 + 0.05) + bob;
+        pokeSprite.scale.set(SPRITE_H * squash, SPRITE_H * stretch, 1);
+      } else {
+        const breathe = Math.sin(elapsed * 2.2) * 0.02;
+        pokeSprite.position.y = (SPRITE_H / 2 + 0.05) + breathe * 0.3;
+        pokeSprite.scale.set(SPRITE_H * (1 - breathe), SPRITE_H * (1 + breathe), 1);
+      }
 
       // Orbital chase camera: always lerps toward player's facing, even
       // while moving. The fwd > 0.1 guard keeps pure strafe from rotating,
@@ -2929,6 +3056,31 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
         } else {
           p.material.opacity = 0.15 + (Math.sin(elapsed * 3) + 1) * 0.06;
         }
+      }
+
+      // NPCs: idle float + sparkle pulse + proximity dialog
+      let closestNpc = null, closestDist = Infinity;
+      for (let i = 0; i < npcList.length; i++) {
+        const n = npcList[i];
+        const bob = Math.sin(elapsed * 1.8 + i) * 0.06;
+        n.sprite.position.y = n.baseY + bob;
+        if (n.spark) {
+          n.spark.rotation.z = elapsed * 1.2;
+          n.spark.material.opacity = 0.45 + (Math.sin(elapsed * 2.5 + i) + 1) * 0.22;
+          n.spark.scale.setScalar(1 + Math.sin(elapsed * 2.2 + i) * 0.08);
+        }
+        const d = Math.hypot(s.wx - n.wx, s.wz - n.wz);
+        if (d < closestDist) { closestDist = d; closestNpc = n; }
+      }
+      const prevNearId = nearNpcRef.current?.npc.id;
+      if (closestNpc && closestDist < 2.6) {
+        if (prevNearId !== closestNpc.npc.id) {
+          nearNpcRef.current = closestNpc;
+          setNearNpc(closestNpc.npc);
+        }
+      } else if (prevNearId) {
+        nearNpcRef.current = null;
+        setNearNpc(null);
       }
 
       renderer.render(scene, camera);
@@ -2983,6 +3135,13 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
         <div className="world-hud"><span className="dot"/><b>{zoneName}</b></div>
         <div className="world-controls-help">{t.worldControls}</div>
         {toast && <div className="world-toast">{toast}</div>}
+        {nearNpc && (
+          <div className="npc-dialog">
+            <span className="name">◆ {lang === "es" ? nearNpc.name_es : nearNpc.name_en}</span>
+            {lang === "es" ? nearNpc.line_es : nearNpc.line_en}
+            <div className="tail"/>
+          </div>
+        )}
         {flash > 0 && <div className="world-flash" key={flash}/>}
       </div>
     </div>
@@ -2990,6 +3149,7 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
 }
 window.WorldView = WorldView;
 window.WORLD_MAPS = WORLD_MAPS;
+window.NPCS = NPCS;
 window.loadWorldSave = loadWorldSave;
 window.saveWorldSave = saveWorldSave;
 window.clearWorldSave = clearWorldSave;
