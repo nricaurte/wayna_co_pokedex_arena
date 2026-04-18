@@ -2442,31 +2442,57 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
     rim.position.set(-10, 8, -8);
     scene.add(rim);
 
-    // Player
+    // Player — billboard sprite of the chosen starter Pokémon
     const playerGroup = new THREE.Group();
-    const bodyMat = new THREE.MeshToonMaterial({ color: 0x6ae0ff, gradientMap: toonGrad });
-    const skinMat = new THREE.MeshToonMaterial({ color: 0xffd8a8, gradientMap: toonGrad });
-    const capMat = new THREE.MeshToonMaterial({ color: 0xff4da6, gradientMap: toonGrad });
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.45, 4, 10), bodyMat);
-    body.position.y = 0.6; body.castShadow = true; playerGroup.add(body);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 20, 14), skinMat);
-    head.position.y = 1.2; head.castShadow = true; playerGroup.add(head);
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.2, 16), capMat);
-    cap.position.y = 1.42; cap.castShadow = true; playerGroup.add(cap);
-    const capBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 16), capMat);
-    capBrim.position.set(0, 1.32, 0.18);
-    capBrim.rotation.x = 0.25;
-    playerGroup.add(capBrim);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1e2e });
-    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), eyeMat);
-    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), eyeMat);
-    eyeL.position.set(-0.08, 1.22, 0.22);
-    eyeR.position.set(0.08, 1.22, 0.22);
-    playerGroup.add(eyeL); playerGroup.add(eyeR);
-    // Shadow disc under player (fallback when real shadow is occluded)
+    const SPRITE_H = 1.6; // visual height in world units
+    const spriteMat = new THREE.SpriteMaterial({
+      transparent: true,
+      depthTest: true,
+      alphaTest: 0.08,
+      color: 0xffffff,
+    });
+    const pokeSprite = new THREE.Sprite(spriteMat);
+    pokeSprite.scale.set(SPRITE_H, SPRITE_H, 1);
+    pokeSprite.position.y = SPRITE_H / 2 + 0.05; // feet touch the ground
+    playerGroup.add(pokeSprite);
+
+    // Load the starter's sprite texture. Prefer the hi-res official artwork;
+    // fall back to the small 96px sprite if that fails.
+    const spriteUrl = save.party?.[0]?.sprite || save.party?.[0]?.spriteSmall;
+    if (spriteUrl) {
+      const loader = new THREE.TextureLoader();
+      loader.setCrossOrigin("anonymous");
+      loader.load(
+        spriteUrl,
+        (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.magFilter = THREE.LinearFilter;
+          tex.minFilter = THREE.LinearMipmapLinearFilter;
+          tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+          spriteMat.map = tex;
+          spriteMat.needsUpdate = true;
+        },
+        undefined,
+        () => {
+          // Fallback to pixel sprite
+          const small = save.party?.[0]?.spriteSmall;
+          if (small && small !== spriteUrl) {
+            loader.load(small, (tex) => {
+              tex.colorSpace = THREE.SRGBColorSpace;
+              tex.magFilter = THREE.NearestFilter;
+              spriteMat.map = tex;
+              spriteMat.needsUpdate = true;
+            });
+          }
+        }
+      );
+    }
+
+    // Shadow disc under player (sprites don't cast real shadows, so this
+    // keeps the character visually grounded).
     const shadowDisc = new THREE.Mesh(
-      new THREE.CircleGeometry(0.4, 24),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })
+      new THREE.CircleGeometry(0.55, 32),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false })
     );
     shadowDisc.rotation.x = -Math.PI / 2;
     shadowDisc.position.y = 0.02;
@@ -2861,12 +2887,9 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
 
       playerGroup.position.set(s.wx, 0, s.wz);
       playerGroup.rotation.y = s.facing;
-      body.position.y = 0.6 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.07 : 0);
-      head.position.y = 1.2 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.05 : 0);
-      cap.position.y = 1.42 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.05 : 0);
-      capBrim.position.y = 1.32 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.05 : 0);
-      eyeL.position.y = 1.22 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.05 : 0);
-      eyeR.position.y = 1.22 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.05 : 0);
+      // Sprite bob when walking
+      const bob = s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.08 : 0;
+      pokeSprite.position.y = (SPRITE_H / 2 + 0.05) + bob;
 
       // Orbital chase camera: always lerps toward player's facing, even
       // while moving. The fwd > 0.1 guard keeps pure strafe from rotating,
