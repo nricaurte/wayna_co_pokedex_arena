@@ -2342,26 +2342,117 @@ function pickWildPokemon(allPokemon, biome){
 
 function StarterPicker({ allPokemon, lang, existingSave, onStart, onContinue, onDelete }){
   const t = window.I18N[lang];
-  const starters = useMemoW(() => {
-    return [1,4,7].map(id => allPokemon.find(p => p.id === id)).filter(Boolean);
+  const [query, setQuery] = useStateW("");
+  const [typeFilter, setTypeFilter] = useStateW("");
+  const [showAll, setShowAll] = useStateW(false);
+
+  const classics = useMemoW(() => {
+    // Classic starters shown as featured quick-pick
+    return [1, 4, 7, 25].map(id => allPokemon.find(p => p.id === id)).filter(Boolean);
   }, [allPokemon]);
-  if (starters.length < 3){
+
+  const filtered = useMemoW(() => {
+    let list = allPokemon;
+    if (query) {
+      const q = query.toLowerCase().trim();
+      list = list.filter(p =>
+        p.name.includes(q) ||
+        String(p.id).padStart(3, "0").includes(q) ||
+        String(p.id) === q
+      );
+    }
+    if (typeFilter) list = list.filter(p => p.types.includes(typeFilter));
+    return list;
+  }, [allPokemon, query, typeFilter]);
+
+  const availableTypes = useMemoW(() => {
+    const set = new Set();
+    allPokemon.forEach(p => p.types.forEach(ty => set.add(ty)));
+    return (window.TYPE_ORDER || []).filter(ty => set.has(ty));
+  }, [allPokemon]);
+
+  if (allPokemon.length < 151) {
     return <div className="starter-wrap"><p style={{color:"var(--ink-dim)"}}>{t.loading}</p></div>;
   }
+
   return (
     <div className="starter-wrap">
       <div className="hero-kicker"><span className="pulse"/>{t.tabWorld.toUpperCase()} · NEW JOURNEY</div>
       <h2 className="starter-title">{t.worldStarterTitle}</h2>
       <p className="starter-lead">{t.worldStarterLead}</p>
-      <div className="starter-grid">
-        {starters.map(p => (
-          <div key={p.id} className="starter-card" onClick={()=>onStart(p)}>
-            <img src={p.sprite} alt={p.name}/>
-            <div className="starter-name">{p.name}</div>
-            <div className="starter-id">#{String(p.id).padStart(3,"0")} · {p.types.join(" · ")}</div>
+
+      {!showAll && (
+        <>
+          <div className="starter-grid">
+            {classics.map(p => (
+              <div key={p.id} className="starter-card" onClick={() => onStart(p)}>
+                <img src={p.sprite} alt={p.name}/>
+                <div className="starter-name">{p.name}</div>
+                <div className="starter-id">#{String(p.id).padStart(3, "0")} · {p.types.join(" · ")}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+          <div style={{marginTop: 18, textAlign: "center"}}>
+            <button className="primary" style={{
+              padding: "10px 20px", borderRadius: 10, border: "1px solid var(--stroke-2)",
+              background: "var(--bg-1)", color: "var(--ink)", fontFamily: "var(--font-mono)",
+              fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer",
+            }} onClick={() => setShowAll(true)}>
+              {lang === "es" ? "Ver los 151 Pokémon" : "See all 151 Pokémon"} →
+            </button>
+          </div>
+        </>
+      )}
+
+      {showAll && (
+        <>
+          <div style={{display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center"}}>
+            <input
+              type="text" value={query} onChange={e => setQuery(e.target.value)}
+              placeholder={t.searchPlaceholder}
+              style={{
+                flex: "1 1 240px", padding: "10px 14px", borderRadius: 10,
+                border: "1px solid var(--stroke-2)", background: "var(--bg-1)", color: "var(--ink)",
+                fontFamily: "var(--font-mono)", fontSize: 13,
+              }}/>
+            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+              style={{
+                padding: "10px 14px", borderRadius: 10, border: "1px solid var(--stroke-2)",
+                background: "var(--bg-1)", color: "var(--ink)", fontFamily: "var(--font-mono)",
+                fontSize: 12, textTransform: "uppercase",
+              }}>
+              <option value="">{t.allTypes}</option>
+              {availableTypes.map(ty => <option key={ty} value={ty}>{ty}</option>)}
+            </select>
+            <button onClick={() => setShowAll(false)} style={{
+              padding: "10px 14px", borderRadius: 10, border: "1px solid var(--stroke-2)",
+              background: "var(--bg-1)", color: "var(--ink-dim)", fontFamily: "var(--font-mono)",
+              fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer",
+            }}>← {lang === "es" ? "Destacados" : "Featured"}</button>
+          </div>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+            gap: 10, maxHeight: 440, overflowY: "auto", padding: "4px 2px",
+          }}>
+            {filtered.map(p => (
+              <div key={p.id} className="starter-card"
+                style={{padding: 10, gap: 4}}
+                onClick={() => onStart(p)}>
+                <img src={p.spriteSmall || p.sprite} alt={p.name} style={{width: 80, height: 80}}/>
+                <div className="starter-name" style={{fontSize: 14}}>{p.name}</div>
+                <div className="starter-id" style={{fontSize: 10}}>#{String(p.id).padStart(3, "0")}</div>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div style={{gridColumn: "1 / -1", textAlign: "center", color: "var(--ink-faint)", padding: 20}}>
+                {t.noResults}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       {existingSave && (
         <div className="starter-actions">
           <button className="primary" onClick={onContinue}>▶ {t.worldContinue}</button>
