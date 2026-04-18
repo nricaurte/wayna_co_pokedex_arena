@@ -788,7 +788,18 @@ body.theme-holo .card:hover{
   border-radius:14px;overflow:hidden;border:1px solid var(--stroke-2);
   background:#050813;box-shadow:0 0 0 1px rgba(106,224,255,0.05) inset, 0 30px 60px -40px rgba(0,0,0,0.9);
 }
-.world-canvas{display:block;width:100%;height:100%;image-rendering:pixelated;outline:none}
+.world-canvas{display:block;width:100%;height:100%;outline:none}
+.world-loader{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg, #0a0e1a, #050813);color:var(--ink-dim);
+  font-family:var(--font-mono);font-size:12px;letter-spacing:0.1em;text-transform:uppercase;
+  flex-direction:column;gap:14px;
+}
+.world-loader .spinner{
+  width:36px;height:36px;border:2px solid var(--stroke-2);border-top-color:var(--accent);
+  border-radius:50%;animation:wSpin 0.9s linear infinite;
+}
+@keyframes wSpin{to{transform:rotate(360deg)}}
 .world-hud{
   position:absolute;left:12px;top:12px;padding:8px 12px;border-radius:10px;
   background:rgba(7,10,20,0.75);backdrop-filter:blur(6px);
@@ -862,6 +873,21 @@ body.theme-holo .card:hover{
   }/*EDITMODE-END*/;
 </script>
 
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+  import * as THREE from "three";
+  window.THREE = THREE;
+  window.__threeReady = true;
+  window.dispatchEvent(new CustomEvent("three-ready"));
+</script>
+
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -922,7 +948,7 @@ const I18N = {
     worldNewGame: "Nueva aventura",
     worldContinue: "Continuar",
     worldDeleteSave: "Borrar partida",
-    worldControls: "Mueve con WASD o flechas. Pisa la hierba alta para encontrar Pokémon salvajes.",
+    worldControls: "WASD/flechas para moverte · Shift para correr · pisa la hierba alta",
     worldEncounter: "¡Algo se mueve en la hierba!",
     worldFirstSight: "¡Has visto por primera vez a",
     worldParty: "Compañero",
@@ -987,7 +1013,7 @@ const I18N = {
     worldNewGame: "New adventure",
     worldContinue: "Continue",
     worldDeleteSave: "Delete save",
-    worldControls: "Move with WASD or arrow keys. Step into tall grass to find wild Pokémon.",
+    worldControls: "WASD/arrows to move · Shift to run · step into tall grass",
     worldEncounter: "Something rustles in the grass!",
     worldFirstSight: "You spotted a wild",
     worldParty: "Partner",
@@ -2289,50 +2315,74 @@ function StarterPicker({ allPokemon, lang, existingSave, onStart, onContinue, on
 }
 window.StarterPicker = StarterPicker;
 
+const BIOME_3D = {
+  town:   { sky: 0x9ecde3, fog: 0xcbe3ea, ground: 0x6b9a3e, grass: 0x7eb852, hemi: 0xaac6d9, sun: 1.3, mood: "day" },
+  route1: { sky: 0x8ec8e8, fog: 0xbddfdc, ground: 0x548b3c, grass: 0x76bb4c, hemi: 0x9bc5d8, sun: 1.3, mood: "day" },
+  forest: { sky: 0x3e5a4a, fog: 0x1e3225, ground: 0x2e5a30, grass: 0x3d7a38, hemi: 0x4a6a58, sun: 0.85, mood: "dim" },
+  cave:   { sky: 0x1a1726, fog: 0x18122a, ground: 0x3a3254, grass: 0x5a4a7a, hemi: 0x46376e, sun: 0.6, mood: "dark" },
+  beach:  { sky: 0xaadfea, fog: 0xd6eff0, ground: 0xe4c98a, grass: 0xd8c27a, hemi: 0xcfe6ea, sun: 1.35, mood: "day" },
+};
+
 function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen }){
   const t = window.I18N[lang];
   const canvasRef = useRefW(null);
   const wrapRef = useRefW(null);
   const [toast, setToast] = useStateW(null);
   const [flash, setFlash] = useStateW(0);
+  const [zoneKey, setZoneKey] = useStateW(save.pos.zone);
+  const [threeReady, setThreeReady] = useStateW(!!window.THREE);
+  const [threeError, setThreeError] = useStateW(null);
+
   const onEncounterRef = useRefW(onEncounter);
   const allPokemonRef = useRefW(allPokemon);
+  const stateRef = useRefW({
+    zone: save.pos.zone,
+    wx: (save.pos.x - MAP_W / 2) * 2 + 1,
+    wz: (save.pos.y - MAP_H / 2) * 2 + 1,
+    facing: 0,
+    cameraYaw: 0,  // camera orbit angle; lerps toward facing
+    steps: save.steps || 0,
+    seen: new Set(save.seen || []),
+    paused: false,
+    lastTileKey: "",
+    lastExitKey: "",
+    moving: false,
+  });
+  const keysRef = useRefW({});
+
   useEffectW(() => { onEncounterRef.current = onEncounter; }, [onEncounter]);
   useEffectW(() => { allPokemonRef.current = allPokemon; }, [allPokemon]);
   useEffectW(() => {
-    // pause/unpause when battle overlay opens/closes
     if (stateRef.current) stateRef.current.paused = !!battleOpen;
     if (!battleOpen && canvasRef.current) canvasRef.current.focus();
   }, [battleOpen]);
 
-  // Mutable gameplay state kept in refs (don't trigger re-renders on every frame)
-  const stateRef = useRefW({
-    zone: save.pos.zone,
-    px: save.pos.x,
-    py: save.pos.y,
-    tx: save.pos.x,
-    ty: save.pos.y,
-    moveT: 1,     // 0->1 tween progress
-    facing: "down",
-    steps: save.steps || 0,
-    seen: new Set(save.seen || []),
-    paused: false,
-    anim: 0,
-  });
-  const keysRef = useRefW({});
+  useEffectW(() => {
+    if (window.THREE) { setThreeReady(true); return; }
+    const onReady = () => setThreeReady(true);
+    const onErr = (e) => setThreeError(String(e.message || e));
+    window.addEventListener("three-ready", onReady);
+    window.addEventListener("error", onErr);
+    const fallback = setTimeout(() => {
+      if (!window.THREE) setThreeError(lang === "es" ? "No se pudo cargar Three.js" : "Failed to load Three.js");
+    }, 8000);
+    return () => {
+      window.removeEventListener("three-ready", onReady);
+      window.removeEventListener("error", onErr);
+      clearTimeout(fallback);
+    };
+  }, [lang]);
 
-  // Public zone label
-  const [zoneKey, setZoneKey] = useStateW(save.pos.zone);
-
-  // Persist periodically
   useEffectW(() => {
     const id = setInterval(() => {
       const s = stateRef.current;
+      const tx = Math.floor((s.wx + MAP_W) / 2);
+      const ty = Math.floor((s.wz + MAP_H) / 2);
       setSave(prev => {
         const next = {
           ...prev,
-          pos: { zone: s.zone, x: s.tx, y: s.ty },
-          steps: s.steps,
+          pos: { zone: s.zone, x: tx, y: ty },
+          steps: Math.floor(s.steps),
           seen: Array.from(s.seen),
         };
         saveWorldSave(next);
@@ -2343,275 +2393,541 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
   }, [setSave]);
 
   useEffectW(() => {
+    if (!threeReady) return;
+    const THREE = window.THREE;
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !THREE) return;
     canvas.focus();
 
+    // Toon gradient (3 bands)
+    const gradCanvas = document.createElement("canvas");
+    gradCanvas.width = 4; gradCanvas.height = 1;
+    const gctx = gradCanvas.getContext("2d");
+    gctx.fillStyle = "#303848"; gctx.fillRect(0,0,1,1);
+    gctx.fillStyle = "#7a8292"; gctx.fillRect(1,0,1,1);
+    gctx.fillStyle = "#c4ccd8"; gctx.fillRect(2,0,1,1);
+    gctx.fillStyle = "#ffffff"; gctx.fillRect(3,0,1,1);
+    const toonGrad = new THREE.CanvasTexture(gradCanvas);
+    toonGrad.minFilter = THREE.NearestFilter;
+    toonGrad.magFilter = THREE.NearestFilter;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(52, 16/9, 0.1, 200);
+    camera.position.set(0, 5, 8);
+    camera.lookAt(0, 1, 0);
+
+    const hemi = new THREE.HemisphereLight(0xbfd5f0, 0x2a2a2a, 0.6);
+    scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xfff4d6, 1.2);
+    sun.position.set(18, 28, 12);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.left = -28;
+    sun.shadow.camera.right = 28;
+    sun.shadow.camera.top = 28;
+    sun.shadow.camera.bottom = -28;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 90;
+    sun.shadow.bias = -0.0008;
+    scene.add(sun);
+    const rim = new THREE.DirectionalLight(0x6ae0ff, 0.35);
+    rim.position.set(-10, 8, -8);
+    scene.add(rim);
+
+    // Player
+    const playerGroup = new THREE.Group();
+    const bodyMat = new THREE.MeshToonMaterial({ color: 0x6ae0ff, gradientMap: toonGrad });
+    const skinMat = new THREE.MeshToonMaterial({ color: 0xffd8a8, gradientMap: toonGrad });
+    const capMat = new THREE.MeshToonMaterial({ color: 0xff4da6, gradientMap: toonGrad });
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.45, 4, 10), bodyMat);
+    body.position.y = 0.6; body.castShadow = true; playerGroup.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 20, 14), skinMat);
+    head.position.y = 1.2; head.castShadow = true; playerGroup.add(head);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.2, 16), capMat);
+    cap.position.y = 1.42; cap.castShadow = true; playerGroup.add(cap);
+    const capBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 16), capMat);
+    capBrim.position.set(0, 1.32, 0.18);
+    capBrim.rotation.x = 0.25;
+    playerGroup.add(capBrim);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1e2e });
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), eyeMat);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), eyeMat);
+    eyeL.position.set(-0.08, 1.22, 0.22);
+    eyeR.position.set(0.08, 1.22, 0.22);
+    playerGroup.add(eyeL); playerGroup.add(eyeR);
+    // Shadow disc under player (fallback when real shadow is occluded)
+    const shadowDisc = new THREE.Mesh(
+      new THREE.CircleGeometry(0.4, 24),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })
+    );
+    shadowDisc.rotation.x = -Math.PI / 2;
+    shadowDisc.position.y = 0.02;
+    playerGroup.add(shadowDisc);
+    scene.add(playerGroup);
+
+    const zoneGroup = new THREE.Group();
+    scene.add(zoneGroup);
+
+    // Reusable geometries
+    const geoTrunk = new THREE.CylinderGeometry(0.18, 0.24, 0.7, 7);
+    const geoLeafA = new THREE.ConeGeometry(1.0, 1.7, 8);
+    const geoLeafB = new THREE.ConeGeometry(0.75, 1.3, 8);
+    const geoLeafC = new THREE.ConeGeometry(0.55, 1.0, 8);
+    const geoRock = new THREE.IcosahedronGeometry(0.55, 0);
+    const geoRockS = new THREE.IcosahedronGeometry(0.32, 0);
+    const geoHouse = new THREE.BoxGeometry(1.5, 1.0, 1.5);
+    const geoRoof = new THREE.ConeGeometry(1.2, 0.8, 4);
+    const geoWindow = new THREE.PlaneGeometry(0.28, 0.28);
+    const geoDoor = new THREE.PlaneGeometry(0.35, 0.55);
+    const geoBlade = new THREE.PlaneGeometry(0.14, 0.45);
+    const geoFlower = new THREE.SphereGeometry(0.05, 6, 4);
+    const geoPortalRing = new THREE.TorusGeometry(0.75, 0.07, 10, 28);
+
+    const swayables = [];
+    const portals = [];
+    const waterMats = [];
+
+    function makeWater(biomeFog) {
+      const mat = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uColorA: { value: new THREE.Color(0x134a78) },
+          uColorB: { value: new THREE.Color(0x6ad2e8) },
+          uFog: { value: new THREE.Color(biomeFog) },
+          uFogNear: { value: 10 },
+          uFogFar: { value: 40 },
+        },
+        vertexShader: "varying vec2 vUv; varying float vWave; varying float vDist; uniform float uTime; void main(){ vUv = uv; vec3 p = position; p.z += sin(p.x*2.5+uTime*1.8)*0.06 + cos(p.y*2.0+uTime*1.3)*0.05; vWave = p.z; vec4 mv = modelViewMatrix * vec4(p,1.0); vDist = -mv.z; gl_Position = projectionMatrix * mv; }",
+        fragmentShader: "varying vec2 vUv; varying float vWave; varying float vDist; uniform vec3 uColorA; uniform vec3 uColorB; uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform float uTime; void main(){ float r = smoothstep(-0.08,0.08, vWave + sin(vUv.x*20.0 + uTime*3.0)*0.02); vec3 col = mix(uColorA,uColorB,r); float sparkle = pow(max(0.0,sin(vUv.x*40.0+uTime*4.0)*sin(vUv.y*35.0+uTime*3.1)),16.0); col += vec3(sparkle)*0.35; float fogF = smoothstep(uFogNear,uFogFar,vDist); col = mix(col,uFog,fogF); gl_FragColor = vec4(col,0.92); }",
+        transparent: true,
+      });
+      return mat;
+    }
+
+    function buildZone(zoneName) {
+      // Dispose old
+      while (zoneGroup.children.length) {
+        const c = zoneGroup.children.pop();
+        c.traverse?.(o => {
+          if (o.geometry && o.geometry !== geoTrunk && o.geometry !== geoLeafA && o.geometry !== geoLeafB && o.geometry !== geoLeafC && o.geometry !== geoRock && o.geometry !== geoRockS && o.geometry !== geoHouse && o.geometry !== geoRoof && o.geometry !== geoWindow && o.geometry !== geoDoor && o.geometry !== geoBlade && o.geometry !== geoFlower && o.geometry !== geoPortalRing) {
+            o.geometry.dispose?.();
+          }
+          if (o.material && !o.userData.shared) {
+            if (Array.isArray(o.material)) o.material.forEach(m => m.dispose?.());
+            else o.material.dispose?.();
+          }
+        });
+      }
+      swayables.length = 0;
+      portals.length = 0;
+      waterMats.length = 0;
+
+      const map = WORLD_MAPS[zoneName];
+      const b = BIOME_3D[zoneName];
+
+      scene.background = new THREE.Color(b.sky);
+      scene.fog = new THREE.Fog(b.fog, 12, 42);
+      hemi.color.setHex(b.sky);
+      hemi.groundColor.setHex(b.ground);
+      hemi.intensity = b.mood === "dark" ? 0.45 : b.mood === "dim" ? 0.55 : 0.7;
+      sun.intensity = b.sun;
+      sun.color.setHex(b.mood === "cave" ? 0xb79aff : 0xfff4d6);
+
+      // Ground plane with vertex colors and gentle displacement
+      const segX = MAP_W * 3, segZ = MAP_H * 3;
+      const baseGeo = new THREE.PlaneGeometry(MAP_W * 2, MAP_H * 2, segX, segZ);
+      baseGeo.rotateX(-Math.PI / 2);
+      const colGround = new THREE.Color(b.ground);
+      const colGrass = new THREE.Color(b.grass);
+      const colPath = zoneName === "beach" ? new THREE.Color(0xf2e0a8) : zoneName === "cave" ? new THREE.Color(0x4a3f66) : new THREE.Color(0xc9a870);
+      const colors = new Float32Array(baseGeo.attributes.position.count * 3);
+      const pos = baseGeo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), z = pos.getZ(i);
+        const h = Math.sin(x * 0.3) * 0.08 + Math.cos(z * 0.22) * 0.07 + Math.sin(x * 0.7 + z * 0.5) * 0.04;
+        pos.setY(i, h);
+        const tx = Math.floor((x + MAP_W) / 2);
+        const ty = Math.floor((z + MAP_H) / 2);
+        const tile = tileAt(map, tx, ty);
+        let c;
+        if (tile === "g") c = colGrass;
+        else if (tile === "p" || tile === ":") c = colPath;
+        else if (tile === "S") c = new THREE.Color(0xe4c98a);
+        else if (tile === "~") c = new THREE.Color(0x1a4a6a);
+        else c = colGround;
+        // Slight noise for texture
+        const jitter = 1 + (Math.random() - 0.5) * 0.08;
+        colors[i * 3] = c.r * jitter;
+        colors[i * 3 + 1] = c.g * jitter;
+        colors[i * 3 + 2] = c.b * jitter;
+      }
+      baseGeo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+      baseGeo.computeVertexNormals();
+      const baseMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGrad });
+      const ground = new THREE.Mesh(baseGeo, baseMat);
+      ground.receiveShadow = true;
+      zoneGroup.add(ground);
+
+      // Trunk + leaves materials per zone
+      const trunkMat = new THREE.MeshToonMaterial({ color: 0x5a3a2a, gradientMap: toonGrad });
+      const leafCol = b.mood === "dark" ? 0x6a5ea0 : b.mood === "dim" ? 0x2a5a2e : zoneName === "beach" ? 0x4a7a3a : 0x3f7a3a;
+      const leafMat = new THREE.MeshToonMaterial({ color: leafCol, gradientMap: toonGrad });
+      const rockCol = zoneName === "cave" ? 0x6a5e7a : zoneName === "beach" ? 0xa89876 : 0x7a7a86;
+      const rockMat = new THREE.MeshToonMaterial({ color: rockCol, gradientMap: toonGrad });
+      const houseWallMat = new THREE.MeshToonMaterial({ color: 0xd6b98a, gradientMap: toonGrad });
+      const houseRoofMat = new THREE.MeshToonMaterial({ color: 0x9a4234, gradientMap: toonGrad });
+      const windowMat = new THREE.MeshBasicMaterial({ color: 0xffd86a });
+      const doorMat = new THREE.MeshBasicMaterial({ color: 0x3a2a1e });
+      const bladeMat = new THREE.MeshToonMaterial({
+        color: b.mood === "dark" ? 0x8a7ab8 : b.mood === "dim" ? 0x4a8a4a : 0x62b03e,
+        gradientMap: toonGrad, side: THREE.DoubleSide,
+      });
+      const flowerColors = [0xffd23f, 0xff6ab0, 0xffffff, 0xff8a3a];
+
+      for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+          const tile = tileAt(map, x, y);
+          const wx = (x - MAP_W / 2) * 2 + 1;
+          const wz = (y - MAP_H / 2) * 2 + 1;
+          if (tile === "T") {
+            const trunk = new THREE.Mesh(geoTrunk, trunkMat);
+            trunk.position.set(wx, 0.35, wz);
+            trunk.castShadow = true; trunk.userData.shared = true;
+            zoneGroup.add(trunk);
+            const lA = new THREE.Mesh(geoLeafA, leafMat);
+            lA.position.set(wx, 1.55, wz);
+            lA.castShadow = true; lA.userData.shared = true;
+            lA.userData.swayPhase = Math.random() * 6.28;
+            lA.userData.swayAmp = 0.06;
+            lA.userData.swayBase = lA.position.y;
+            swayables.push(lA);
+            zoneGroup.add(lA);
+            const lB = new THREE.Mesh(geoLeafB, leafMat);
+            lB.position.set(wx + (Math.random()-0.5)*0.2, 2.35, wz + (Math.random()-0.5)*0.2);
+            lB.castShadow = true; lB.userData.shared = true;
+            zoneGroup.add(lB);
+            const lC = new THREE.Mesh(geoLeafC, leafMat);
+            lC.position.set(wx, 3.0, wz);
+            lC.castShadow = true; lC.userData.shared = true;
+            zoneGroup.add(lC);
+          } else if (tile === "R") {
+            const rock = new THREE.Mesh(geoRock, rockMat);
+            rock.position.set(wx + (Math.random()-0.5)*0.3, 0.3, wz + (Math.random()-0.5)*0.3);
+            rock.rotation.set(Math.random()*0.4, Math.random()*6.28, Math.random()*0.4);
+            rock.scale.setScalar(0.9 + Math.random()*0.4);
+            rock.castShadow = true; rock.receiveShadow = true; rock.userData.shared = true;
+            zoneGroup.add(rock);
+            if (Math.random() < 0.4) {
+              const rs = new THREE.Mesh(geoRockS, rockMat);
+              rs.position.set(wx + (Math.random()-0.5)*1.0, 0.16, wz + (Math.random()-0.5)*1.0);
+              rs.rotation.y = Math.random() * 6.28;
+              rs.castShadow = true; rs.userData.shared = true;
+              zoneGroup.add(rs);
+            }
+          } else if (tile === "H") {
+            const hg = new THREE.Group();
+            const wall = new THREE.Mesh(geoHouse, houseWallMat);
+            wall.position.y = 0.5;
+            wall.castShadow = true; wall.receiveShadow = true; wall.userData.shared = true;
+            hg.add(wall);
+            const roof = new THREE.Mesh(geoRoof, houseRoofMat);
+            roof.position.y = 1.4;
+            roof.rotation.y = Math.PI / 4;
+            roof.castShadow = true; roof.userData.shared = true;
+            hg.add(roof);
+            const win1 = new THREE.Mesh(geoWindow, windowMat);
+            win1.position.set(0.4, 0.55, 0.76); win1.userData.shared = true;
+            hg.add(win1);
+            const win2 = new THREE.Mesh(geoWindow, windowMat);
+            win2.position.set(-0.4, 0.55, 0.76); win2.userData.shared = true;
+            hg.add(win2);
+            const door = new THREE.Mesh(geoDoor, doorMat);
+            door.position.set(0, 0.3, 0.755); door.userData.shared = true;
+            hg.add(door);
+            hg.position.set(wx, 0, wz);
+            hg.rotation.y = Math.random() * 0.3 - 0.15;
+            zoneGroup.add(hg);
+          } else if (tile === "~") {
+            const wmat = makeWater(b.fog);
+            const w = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 2.1, 8, 8), wmat);
+            w.rotation.x = -Math.PI / 2;
+            w.position.set(wx, 0.02, wz);
+            waterMats.push(wmat);
+            zoneGroup.add(w);
+          } else if (tile === "g") {
+            const n = 6;
+            for (let k = 0; k < n; k++) {
+              const blade = new THREE.Mesh(geoBlade, bladeMat);
+              const ox = (Math.random() - 0.5) * 1.7;
+              const oz = (Math.random() - 0.5) * 1.7;
+              blade.position.set(wx + ox, 0.22, wz + oz);
+              blade.rotation.y = Math.random() * Math.PI;
+              blade.userData.shared = true;
+              blade.userData.swayPhase = Math.random() * 6.28;
+              blade.userData.swayAmp = 0.18;
+              blade.userData.swayAxisZ = true;
+              swayables.push(blade);
+              zoneGroup.add(blade);
+            }
+            if (Math.random() < 0.35) {
+              const stem = new THREE.Mesh(geoBlade, bladeMat);
+              stem.position.set(wx + (Math.random()-0.5)*1.4, 0.25, wz + (Math.random()-0.5)*1.4);
+              stem.userData.shared = true;
+              zoneGroup.add(stem);
+              const flower = new THREE.Mesh(geoFlower, new THREE.MeshBasicMaterial({ color: flowerColors[Math.floor(Math.random()*flowerColors.length)] }));
+              flower.position.copy(stem.position);
+              flower.position.y = 0.48;
+              zoneGroup.add(flower);
+            }
+          }
+          const isExit = map.exits.some(e => e.x === x && e.y === y);
+          if (isExit) {
+            const ring = new THREE.Mesh(
+              geoPortalRing,
+              new THREE.MeshBasicMaterial({ color: 0x6ae0ff, transparent: true, opacity: 0.85 })
+            );
+            ring.position.set(wx, 0.6, wz);
+            ring.rotation.x = Math.PI / 2;
+            ring.userData.shared = true;
+            portals.push(ring);
+            zoneGroup.add(ring);
+            const glow = new THREE.Mesh(
+              new THREE.CircleGeometry(0.9, 24),
+              new THREE.MeshBasicMaterial({ color: 0x6ae0ff, transparent: true, opacity: 0.18 })
+            );
+            glow.rotation.x = -Math.PI / 2;
+            glow.position.set(wx, 0.05, wz);
+            portals.push(glow);
+            zoneGroup.add(glow);
+          }
+        }
+      }
+    }
+
+    buildZone(stateRef.current.zone);
+
+    // Debug handles (safe to expose; used by e2e tests)
+    window.__world = { state: stateRef.current, camera, playerGroup, renderer, scene };
+
+    function resize() {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      if (w <= 0 || h <= 0) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    const GAME_KEYS = ["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","shift"];
     const onDown = (e) => {
+      if (!canvas.isConnected) return;
       const k = e.key.toLowerCase();
+      if (!GAME_KEYS.includes(k)) return;
+      // Don't capture keys if user is typing in an input
+      const ae = document.activeElement;
+      if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
       keysRef.current[k] = true;
-      if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d"].includes(k)) e.preventDefault();
+      e.preventDefault();
     };
-    const onUp = (e) => { keysRef.current[e.key.toLowerCase()] = false; };
-    canvas.addEventListener("keydown", onDown);
-    canvas.addEventListener("keyup", onUp);
+    const onUp = (e) => {
+      const k = e.key.toLowerCase();
+      if (GAME_KEYS.includes(k)) keysRef.current[k] = false;
+    };
+    const onBlur = () => { keysRef.current = {}; };
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    window.addEventListener("blur", onBlur);
+
+    function isBlockedAt(wx, wz, mapName) {
+      const map = WORLD_MAPS[mapName];
+      const tx = Math.floor((wx + MAP_W) / 2);
+      const ty = Math.floor((wz + MAP_H) / 2);
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const cx = tx + dx, cy = ty + dy;
+          const tile = tileAt(map, cx, cy);
+          if (isWalkable(tile)) continue;
+          const tcx = (cx - MAP_W / 2) * 2 + 1;
+          const tcz = (cy - MAP_H / 2) * 2 + 1;
+          const dx2 = wx - tcx, dz2 = wz - tcz;
+          if (Math.hypot(dx2, dz2) < 1.1) return true;
+        }
+      }
+      // Clamp to plane bounds
+      if (wx < -MAP_W + 0.5 || wx > MAP_W - 0.5 || wz < -MAP_H + 0.5 || wz > MAP_H - 0.5) return true;
+      return false;
+    }
 
     let raf;
-    let last = performance.now();
-    const ctx = canvas.getContext("2d");
-    const W = canvas.width = 960;
-    const H = canvas.height = 540;
+    const clock = new THREE.Clock();
+    const camTarget = new THREE.Vector3();
+    const lookTarget = new THREE.Vector3();
 
-    const tryMove = () => {
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      const dt = Math.min(0.05, clock.getDelta());
+      const elapsed = clock.elapsedTime;
       const s = stateRef.current;
-      if (s.moveT < 1 || s.paused) return;
-      const k = keysRef.current;
-      let dx = 0, dy = 0, facing = s.facing;
-      if (k["arrowup"] || k["w"]) { dy = -1; facing = "up"; }
-      else if (k["arrowdown"] || k["s"]) { dy = 1; facing = "down"; }
-      else if (k["arrowleft"] || k["a"]) { dx = -1; facing = "left"; }
-      else if (k["arrowright"] || k["d"]) { dx = 1; facing = "right"; }
-      if (!dx && !dy) return;
-      s.facing = facing;
-      const nx = s.tx + dx, ny = s.ty + dy;
-      const map = WORLD_MAPS[s.zone];
 
-      // Exit?
-      const exit = map.exits.find(e => e.x === nx && e.y === ny);
-      if (exit){
-        s.paused = true;
-        setFlash(f => f + 1);
-        setTimeout(() => {
-          s.zone = exit.to;
-          s.tx = s.px = exit.tx;
-          s.ty = s.py = exit.ty;
-          s.moveT = 1;
-          s.paused = false;
-          setZoneKey(exit.to);
-        }, 230);
-        return;
-      }
+      s.moving = false;
+      if (!s.paused) {
+        const k = keysRef.current;
+        let fwd = 0, right = 0;
+        if (k["arrowup"] || k["w"]) fwd += 1;
+        if (k["arrowdown"] || k["s"]) fwd -= 1;
+        if (k["arrowleft"] || k["a"]) right -= 1;
+        if (k["arrowright"] || k["d"]) right += 1;
+        const mag = Math.hypot(fwd, right);
+        if (mag > 0) {
+          s.moving = true;
+          fwd /= mag; right /= mag;
+          // Camera-relative movement: W = away from camera, D = strafe right.
+          // camRight = cross(camForward, worldUp) in right-handed coords.
+          const cfx = Math.sin(s.cameraYaw), cfz = Math.cos(s.cameraYaw);
+          const crx = -cfz, crz = cfx;
+          const wdx = fwd * cfx + right * crx;
+          const wdz = fwd * cfz + right * crz;
+          const speed = (k["shift"] ? 7.5 : 4.2) * dt;
+          const tryX = s.wx + wdx * speed;
+          if (!isBlockedAt(tryX, s.wz, s.zone)) s.wx = tryX;
+          const tryZ = s.wz + wdz * speed;
+          if (!isBlockedAt(s.wx, tryZ, s.zone)) s.wz = tryZ;
+          // Player rotates toward movement direction every frame (any key
+          // combo rotates the world, including pure strafe — feels like
+          // Pokémon SV: hold A and the character circles left).
+          const target = Math.atan2(wdx, wdz);
+          let diff = target - s.facing;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          s.facing += diff * Math.min(1, dt * 12);
+          while (s.facing > Math.PI) s.facing -= Math.PI * 2;
+          while (s.facing < -Math.PI) s.facing += Math.PI * 2;
+          s.steps += speed;
 
-      // Blocked?
-      const tile = tileAt(map, nx, ny);
-      if (!isWalkable(tile)) return;
-
-      s.px = s.tx; s.py = s.ty;
-      s.tx = nx; s.ty = ny;
-      s.moveT = 0;
-      s.steps += 1;
-
-      // Encounter check after landing handled on moveT complete
-    };
-
-    const onMoveComplete = () => {
-      const s = stateRef.current;
-      const map = WORLD_MAPS[s.zone];
-      const tile = tileAt(map, s.tx, s.ty);
-      if (isGrass(tile) && map.biome.length > 0 && Math.random() < 0.12){
-        const wild = pickWildPokemon(allPokemonRef.current, map.biome);
-        if (wild){
-          const firstTime = !s.seen.has(wild.name);
-          s.seen.add(wild.name);
-          s.paused = true;
-          setToast(t.worldEncounter);
-          setFlash(f => f + 1);
-          setTimeout(() => {
-            setToast(null);
-            onEncounterRef.current(wild, firstTime);
-          }, 650);
+          const tx = Math.floor((s.wx + MAP_W) / 2);
+          const ty = Math.floor((s.wz + MAP_H) / 2);
+          const tileKey = tx + "," + ty;
+          const map = WORLD_MAPS[s.zone];
+          const exit = map.exits.find(e => e.x === tx && e.y === ty);
+          if (exit && tileKey !== s.lastExitKey) {
+            s.lastExitKey = tileKey;
+            s.paused = true;
+            setFlash(f => f + 1);
+            setTimeout(() => {
+              s.zone = exit.to;
+              s.wx = (exit.tx - MAP_W / 2) * 2 + 1;
+              s.wz = (exit.ty - MAP_H / 2) * 2 + 1;
+              // Mark the arrival tile as "used" so we don't instantly bounce
+              // back through the paired exit in the new zone.
+              s.lastExitKey = exit.tx + "," + exit.ty;
+              s.lastTileKey = s.lastExitKey;
+              buildZone(s.zone);
+              setZoneKey(exit.to);
+              s.paused = false;
+            }, 280);
+          } else if (!exit) {
+            s.lastExitKey = "";
+            const tile = tileAt(map, tx, ty);
+            if (tile === "g" && map.biome.length > 0 && tileKey !== s.lastTileKey) {
+              s.lastTileKey = tileKey;
+              if (Math.random() < 0.17) {
+                const wild = pickWildPokemon(allPokemonRef.current, map.biome);
+                if (wild) {
+                  const firstTime = !s.seen.has(wild.name);
+                  s.seen.add(wild.name);
+                  s.paused = true;
+                  setToast(t.worldEncounter);
+                  setFlash(f => f + 1);
+                  setTimeout(() => {
+                    setToast(null);
+                    onEncounterRef.current(wild, firstTime);
+                  }, 700);
+                }
+              }
+            }
+          }
         }
       }
-    };
 
-    const drawTile = (tile, x, y, map, animFrame) => {
-      const px = x * TILE, py = y * TILE;
-      // base
-      ctx.fillStyle = map.bg;
-      ctx.fillRect(px, py, TILE, TILE);
+      playerGroup.position.set(s.wx, 0, s.wz);
+      playerGroup.rotation.y = s.facing;
+      body.position.y = 0.6 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.07 : 0);
+      head.position.y = 1.2 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.05 : 0);
+      cap.position.y = 1.42 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.05 : 0);
+      capBrim.position.y = 1.32 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.05 : 0);
+      eyeL.position.y = 1.22 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.05 : 0);
+      eyeR.position.y = 1.22 + (s.moving ? Math.abs(Math.sin(elapsed * 11)) * 0.05 : 0);
 
-      if (tile === "T"){
-        // tree
-        ctx.fillStyle = "#1a2e1a";
-        ctx.fillRect(px, py, TILE, TILE);
-        ctx.fillStyle = "#2f5a2b";
-        ctx.beginPath();
-        ctx.arc(px + TILE/2, py + TILE/2, TILE*0.42, 0, Math.PI*2);
-        ctx.fill();
-        ctx.fillStyle = "#1c3a1c";
-        ctx.fillRect(px + TILE*0.42, py + TILE*0.7, TILE*0.16, TILE*0.25);
-      } else if (tile === "R"){
-        ctx.fillStyle = "#2a2a3a";
-        ctx.fillRect(px, py, TILE, TILE);
-        ctx.fillStyle = "#4a4a5e";
-        ctx.beginPath();
-        ctx.arc(px + TILE/2, py + TILE/2, TILE*0.38, 0, Math.PI*2);
-        ctx.fill();
-        ctx.fillStyle = "#60607a";
-        ctx.beginPath();
-        ctx.arc(px + TILE*0.4, py + TILE*0.4, TILE*0.14, 0, Math.PI*2);
-        ctx.fill();
-      } else if (tile === "H"){
-        ctx.fillStyle = "#4a3b2a";
-        ctx.fillRect(px+2, py+TILE*0.3, TILE-4, TILE*0.7-2);
-        ctx.fillStyle = "#7a4a3a";
-        ctx.beginPath();
-        ctx.moveTo(px, py + TILE*0.35);
-        ctx.lineTo(px + TILE/2, py + 4);
-        ctx.lineTo(px + TILE, py + TILE*0.35);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = "#2a1e14";
-        ctx.fillRect(px + TILE*0.4, py + TILE*0.6, TILE*0.2, TILE*0.4);
-      } else if (tile === "g"){
-        ctx.fillStyle = map.grassColor;
-        ctx.fillRect(px, py, TILE, TILE);
-        ctx.strokeStyle = "rgba(0,0,0,0.2)";
-        ctx.lineWidth = 1;
-        for (let i=0;i<5;i++){
-          const gx = px + (i*7 + (x*13)%7) % (TILE-4) + 2;
-          const gy = py + TILE*0.5 + ((i*5 + (y*7)%5) % (TILE*0.4));
-          ctx.beginPath();
-          ctx.moveTo(gx, gy + 4);
-          ctx.lineTo(gx, gy - 3);
-          ctx.stroke();
-        }
-      } else if (tile === "p"){
-        ctx.fillStyle = map.pathColor;
-        ctx.fillRect(px, py, TILE, TILE);
-      } else if (tile === "~"){
-        const shimmer = Math.sin(animFrame * 0.04 + x*0.6 + y*0.3) * 0.1;
-        ctx.fillStyle = `rgb(${40 + shimmer*60}, ${90 + shimmer*40}, ${160 + shimmer*30})`;
-        ctx.fillRect(px, py, TILE, TILE);
-        ctx.strokeStyle = "rgba(255,255,255,0.2)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(px + 4, py + TILE*0.4 + shimmer*6);
-        ctx.lineTo(px + TILE - 4, py + TILE*0.4 + shimmer*6);
-        ctx.stroke();
-      } else if (tile === "S"){
-        ctx.fillStyle = "#e4c98a";
-        ctx.fillRect(px, py, TILE, TILE);
-        ctx.fillStyle = "rgba(0,0,0,0.06)";
-        ctx.fillRect(px + (x*13)%TILE, py + (y*7)%TILE, 2, 2);
-      } else if (tile === ":"){
-        ctx.fillStyle = map.pathColor;
-        ctx.fillRect(px, py, TILE, TILE);
-        ctx.fillStyle = "rgba(255,255,255,0.04)";
-        ctx.fillRect(px + (x*11)%TILE, py + (y*13)%TILE, 3, 1);
-      } else {
-        // "."
-        ctx.fillStyle = map.bg;
-        ctx.fillRect(px, py, TILE, TILE);
-      }
-    };
+      // Orbital chase camera: always lerps toward player's facing, even
+      // while moving. The fwd > 0.1 guard keeps pure strafe from rotating,
+      // so A/D still feel like side-steps rather than spirals.
+      let yawDiff = s.facing - s.cameraYaw;
+      while (yawDiff > Math.PI) yawDiff -= Math.PI * 2;
+      while (yawDiff < -Math.PI) yawDiff += Math.PI * 2;
+      s.cameraYaw += yawDiff * Math.min(1, dt * 3.5);
+      while (s.cameraYaw > Math.PI) s.cameraYaw -= Math.PI * 2;
+      while (s.cameraYaw < -Math.PI) s.cameraYaw += Math.PI * 2;
+      const dist = 7.2, height = 5.2;
+      camera.position.set(
+        s.wx - Math.sin(s.cameraYaw) * dist,
+        height,
+        s.wz - Math.cos(s.cameraYaw) * dist
+      );
+      lookTarget.set(s.wx, 1.2, s.wz);
+      camera.lookAt(lookTarget);
 
-    const drawPlayer = (cx, cy) => {
-      const s = stateRef.current;
-      // shadow
-      ctx.fillStyle = "rgba(0,0,0,0.4)";
-      ctx.beginPath();
-      ctx.ellipse(cx, cy + TILE*0.35, TILE*0.28, TILE*0.1, 0, 0, Math.PI*2);
-      ctx.fill();
-      // body
-      ctx.fillStyle = "#6ae0ff";
-      ctx.beginPath();
-      ctx.arc(cx, cy, TILE*0.3, 0, Math.PI*2);
-      ctx.fill();
-      // outline
-      ctx.strokeStyle = "#0a0e1a";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      // facing indicator
-      const dirs = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
-      const [dx, dy] = dirs[s.facing] || [0,1];
-      ctx.fillStyle = "#0a0e1a";
-      ctx.beginPath();
-      ctx.arc(cx + dx * TILE*0.15, cy + dy * TILE*0.15, TILE*0.07, 0, Math.PI*2);
-      ctx.fill();
-      // glow pulse
-      const p = (Math.sin(s.anim * 0.08) + 1) / 2;
-      ctx.strokeStyle = `rgba(106,224,255,${0.2 + p*0.3})`;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, TILE*0.36 + p*3, 0, Math.PI*2);
-      ctx.stroke();
-    };
-
-    const loop = (now) => {
-      raf = requestAnimationFrame(loop);
-      const dt = Math.min(40, now - last);
-      last = now;
-      const s = stateRef.current;
-      s.anim += 1;
-
-      // Advance tween
-      if (s.moveT < 1){
-        s.moveT = Math.min(1, s.moveT + dt / 180);
-        if (s.moveT >= 1){
-          s.px = s.tx; s.py = s.ty;
-          onMoveComplete();
-        }
-      } else if (!s.paused){
-        tryMove();
-      }
-
-      const map = WORLD_MAPS[s.zone];
-      const px = s.px + (s.tx - s.px) * s.moveT;
-      const py = s.py + (s.ty - s.py) * s.moveT;
-
-      // Camera
-      const camX = px * TILE + TILE/2 - W/2;
-      const camY = py * TILE + TILE/2 - H/2;
-
-      // Clear + bg
-      ctx.fillStyle = map.bg;
-      ctx.fillRect(0, 0, W, H);
-
-      // Tiles visible
-      ctx.save();
-      ctx.translate(-camX, -camY);
-      const minX = Math.max(0, Math.floor(camX / TILE) - 1);
-      const maxX = Math.min(MAP_W - 1, Math.ceil((camX + W) / TILE));
-      const minY = Math.max(0, Math.floor(camY / TILE) - 1);
-      const maxY = Math.min(MAP_H - 1, Math.ceil((camY + H) / TILE));
-      for (let y = minY; y <= maxY; y++){
-        for (let x = minX; x <= maxX; x++){
-          drawTile(tileAt(map, x, y), x, y, map, s.anim);
+      // Animate water, grass sway, portals
+      for (let i = 0; i < waterMats.length; i++) waterMats[i].uniforms.uTime.value = elapsed;
+      for (let i = 0; i < swayables.length; i++) {
+        const o = swayables[i];
+        const ph = o.userData.swayPhase || 0;
+        const amp = o.userData.swayAmp || 0.1;
+        if (o.userData.swayAxisZ) {
+          o.rotation.z = Math.sin(elapsed * 2.5 + ph) * amp;
+        } else {
+          o.position.y = (o.userData.swayBase || o.position.y) + Math.sin(elapsed * 1.4 + ph) * amp;
         }
       }
-      // Exits
-      map.exits.forEach(e => {
-        const ex = e.x * TILE, ey = e.y * TILE;
-        ctx.strokeStyle = "rgba(106,224,255,0.6)";
-        ctx.lineWidth = 2;
-        const pulse = (Math.sin(s.anim * 0.08) + 1) / 2;
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(ex + 2, ey + 2, TILE - 4, TILE - 4);
-        ctx.setLineDash([]);
-        ctx.fillStyle = `rgba(106,224,255,${0.08 + pulse*0.08})`;
-        ctx.fillRect(ex, ey, TILE, TILE);
-      });
+      for (let i = 0; i < portals.length; i++) {
+        const p = portals[i];
+        if (p.geometry.type === "TorusGeometry") {
+          p.rotation.z = elapsed * 1.8;
+          p.scale.setScalar(1 + Math.sin(elapsed * 3) * 0.06);
+        } else {
+          p.material.opacity = 0.15 + (Math.sin(elapsed * 3) + 1) * 0.06;
+        }
+      }
 
-      // Player
-      drawPlayer(px * TILE + TILE/2, py * TILE + TILE/2);
-
-      // Vignette
-      ctx.restore();
-      const grad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.35, W/2, H/2, Math.max(W,H)*0.7);
-      grad.addColorStop(0, "rgba(0,0,0,0)");
-      grad.addColorStop(1, "rgba(0,0,0,0.55)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W, H);
+      renderer.render(scene, camera);
     };
+    tick();
 
-    raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
-      canvas.removeEventListener("keydown", onDown);
-      canvas.removeEventListener("keyup", onUp);
+      ro.disconnect();
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("blur", onBlur);
+      scene.traverse(o => {
+        o.geometry?.dispose?.();
+        if (o.material) {
+          if (Array.isArray(o.material)) o.material.forEach(m => m.dispose?.());
+          else o.material.dispose?.();
+        }
+      });
+      renderer.dispose();
     };
-  }, []);
+  }, [threeReady]);
 
   const zoneName = t[WORLD_MAPS[zoneKey].name] || zoneKey;
   const seenCount = (save.seen || []).length;
@@ -2624,12 +2940,23 @@ function WorldView({ allPokemon, save, setSave, onEncounter, lang, battleOpen })
         </div>
         <div className="world-stats">
           <span>{t.worldParty}<b>{save.party[0]?.name || "—"}</b></span>
-          <span>{t.worldSteps}<b>{save.steps || 0}</b></span>
+          <span>{t.worldSteps}<b>{Math.floor(save.steps || 0)}</b></span>
           <span>{t.worldSeen}<b>{seenCount}/151</b></span>
         </div>
       </div>
       <div className="world-canvas-wrap">
         <canvas ref={canvasRef} className="world-canvas" tabIndex={0}/>
+        {!threeReady && !threeError && (
+          <div className="world-loader">
+            <div className="spinner"/>
+            <div>{lang==="es" ? "Cargando motor 3D…" : "Loading 3D engine…"}</div>
+          </div>
+        )}
+        {threeError && (
+          <div className="world-loader">
+            <div style={{color:"var(--bad)"}}>⚠ {threeError}</div>
+          </div>
+        )}
         <div className="world-hud"><span className="dot"/><b>{zoneName}</b></div>
         <div className="world-controls-help">{t.worldControls}</div>
         {toast && <div className="world-toast">{toast}</div>}
