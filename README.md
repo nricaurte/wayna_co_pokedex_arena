@@ -2,7 +2,7 @@
 
 **Live:** https://pokedex-area.wayna.co
 
-Landing page de Pokémon con estética RPG-HUD: explorador de los 151 de Gen I con búsqueda, filtros por tipo, modal de detalle con radar hexagonal animado, modo comparar, toggle ES/EN y 3 temas (RPG / Arcade / Holo).
+Landing page de Pokémon con estética RPG-HUD: explorador de los 151 de Gen I con búsqueda, filtros por tipo, modal de detalle con radar hexagonal animado, modo comparar, **modo batalla con animaciones (lunge, proyectiles, impactos, popups de daño y crítico)**, toggle ES/EN y 3 temas (RPG / Arcade / Holo).
 
 Datos en vivo desde [PokéAPI](https://pokeapi.co). Sprites desde el CDN oficial de PokéAPI.
 

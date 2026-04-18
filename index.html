@@ -453,8 +453,310 @@ body.theme-holo .card:hover{
     var(--panel);
 }
 
+/* ===== Battle arena ===== */
+.battle{
+  width:min(1200px,100%);max-height:95vh;overflow:hidden;
+  border:1px solid var(--stroke-2);border-radius:20px;background:var(--panel);
+  box-shadow:0 40px 80px -20px rgba(0,0,0,0.9);
+  display:flex;flex-direction:column;animation:rise .25s ease;position:relative;
+}
+.battle-close{position:absolute;right:18px;top:18px;z-index:10;width:36px;height:36px;border:1px solid var(--stroke-2);border-radius:8px;color:var(--ink-dim);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4)}
+.battle-close:hover{color:var(--ink);border-color:var(--accent)}
+
+.stage{
+  position:relative;height:440px;overflow:hidden;
+  background:linear-gradient(180deg,#1a1e3a 0%,#0c0f1e 100%);
+  border-bottom:1px solid var(--stroke-2);
+}
+.stage-bg{position:absolute;inset:0;overflow:hidden}
+.stage-grid{
+  position:absolute;left:-20%;right:-20%;bottom:-10%;height:60%;
+  background:
+    linear-gradient(to right, rgba(106,224,255,0.12) 1px, transparent 1px) 0 0/60px 60px,
+    linear-gradient(to bottom, rgba(106,224,255,0.12) 1px, transparent 1px) 0 0/60px 60px,
+    radial-gradient(ellipse at 50% 100%, rgba(106,224,255,0.22), transparent 70%);
+  transform:perspective(500px) rotateX(62deg);
+  transform-origin:bottom;
+}
+.stage-sun{
+  position:absolute;left:50%;top:18%;transform:translateX(-50%);
+  width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle, rgba(255,77,166,0.55), rgba(106,224,255,0.15) 50%, transparent 70%);
+  filter:blur(8px);
+}
+
+.fighter{position:absolute;display:flex;align-items:flex-end;gap:16px;transition:transform .15s}
+.fighter.enemy{top:24px;right:32px;flex-direction:row-reverse}
+.fighter.player{bottom:24px;left:32px}
+.fighter.shake{animation:shake 0.4s}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-14px) rotate(-2deg)}
+  40%{transform:translateX(12px) rotate(2deg)}
+  60%{transform:translateX(-8px)}
+  80%{transform:translateX(6px)}
+}
+.fighter.flash .sprite-wrap img{animation:flash 0.4s}
+@keyframes flash{
+  0%,100%{filter:drop-shadow(0 10px 14px rgba(0,0,0,0.5))}
+  40%{filter:drop-shadow(0 0 30px #fff) brightness(3) saturate(0)}
+}
+
+/* Lunge: attacker leans toward opponent */
+.fighter.player.lunge{animation:lunge-p 0.42s cubic-bezier(.34,1.56,.64,1)}
+.fighter.enemy.lunge{animation:lunge-e 0.42s cubic-bezier(.34,1.56,.64,1)}
+@keyframes lunge-p{
+  0%,100%{transform:translate(0,0)}
+  45%{transform:translate(120px,-80px) rotate(-6deg)}
+}
+@keyframes lunge-e{
+  0%,100%{transform:translate(0,0)}
+  45%{transform:translate(-120px,80px) rotate(-6deg)}
+}
+
+/* Projectile: bolt traveling between fighters */
+.projectile{
+  position:absolute;
+  width:70px;height:28px;
+  pointer-events:none;
+  z-index:5;
+  transform-origin:center;
+}
+.projectile.from-a{
+  animation:proj-a .62s cubic-bezier(.5,0,.9,.5) forwards;
+  left:180px;bottom:160px;
+}
+.projectile.from-b{
+  animation:proj-b .62s cubic-bezier(.5,0,.9,.5) forwards;
+  right:180px;top:160px;
+  transform:scaleX(-1);
+}
+@keyframes proj-a{
+  0%{transform:translate(0,0) scale(.4) rotate(-18deg);opacity:0}
+  15%{opacity:1}
+  100%{transform:translate(440px,-260px) scale(1) rotate(-18deg);opacity:1}
+}
+@keyframes proj-b{
+  0%{transform:scaleX(-1) translate(0,0) scale(.4) rotate(-18deg);opacity:0}
+  15%{opacity:1}
+  100%{transform:scaleX(-1) translate(440px,-260px) scale(1) rotate(-18deg);opacity:1}
+}
+.projectile .p-core{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse at 75% 50%, #fff 0%, var(--pc) 35%, transparent 75%);
+  border-radius:50%;
+  filter:blur(.5px) drop-shadow(0 0 10px var(--pc));
+}
+.projectile .p-trail{
+  position:absolute;top:50%;left:0;width:90%;height:4px;
+  transform:translateY(-50%);
+  background:linear-gradient(90deg, transparent, var(--pc));
+  filter:blur(2px);
+  opacity:.85;
+}
+.projectile .p-glow{
+  position:absolute;inset:-20px;
+  background:radial-gradient(circle, var(--pc) 0%, transparent 55%);
+  opacity:.5;
+  filter:blur(8px);
+}
+
+/* Impact: burst on defender */
+.impact{
+  position:absolute;
+  width:240px;height:240px;
+  pointer-events:none;
+  z-index:6;
+  animation:imp-pop .5s ease-out forwards;
+}
+.impact.side-a{left:60px;bottom:90px}
+.impact.side-b{right:60px;top:90px}
+@keyframes imp-pop{
+  0%{transform:scale(.2);opacity:0}
+  30%{opacity:1}
+  100%{transform:scale(1.2);opacity:0}
+}
+.impact .imp-ring{
+  position:absolute;inset:30%;
+  border-radius:50%;
+  border:4px solid var(--ic);
+  box-shadow:0 0 24px var(--ic), inset 0 0 24px var(--ic);
+  animation:imp-ring .5s ease-out forwards;
+}
+.impact .imp-ring-2{
+  animation-delay:.08s;
+  border-color:#fff;
+  opacity:.8;
+}
+@keyframes imp-ring{
+  0%{transform:scale(.3);opacity:1}
+  100%{transform:scale(2.2);opacity:0}
+}
+.impact .imp-star{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:120px;color:#fff;
+  text-shadow:0 0 24px var(--ic),0 0 50px var(--ic);
+  animation:imp-star .45s ease-out forwards;
+}
+@keyframes imp-star{
+  0%{transform:scale(.3) rotate(0);opacity:0}
+  40%{transform:scale(1.3) rotate(60deg);opacity:1}
+  100%{transform:scale(1.8) rotate(120deg);opacity:0}
+}
+.impact .imp-spikes{position:absolute;inset:0}
+.impact .imp-spikes span{
+  position:absolute;top:50%;left:50%;
+  width:70px;height:6px;
+  background:linear-gradient(90deg, var(--ic), transparent);
+  transform-origin:0 50%;
+  filter:drop-shadow(0 0 6px var(--ic));
+  animation:imp-spike .45s ease-out forwards;
+}
+.impact .imp-spikes span:nth-child(1){transform:rotate(0deg)}
+.impact .imp-spikes span:nth-child(2){transform:rotate(45deg)}
+.impact .imp-spikes span:nth-child(3){transform:rotate(90deg)}
+.impact .imp-spikes span:nth-child(4){transform:rotate(135deg)}
+.impact .imp-spikes span:nth-child(5){transform:rotate(180deg)}
+.impact .imp-spikes span:nth-child(6){transform:rotate(225deg)}
+.impact .imp-spikes span:nth-child(7){transform:rotate(270deg)}
+.impact .imp-spikes span:nth-child(8){transform:rotate(315deg)}
+@keyframes imp-spike{
+  0%{width:0;opacity:0}
+  40%{width:90px;opacity:1}
+  100%{width:140px;opacity:0}
+}
+
+/* Damage popup */
+.dmg-pop{
+  position:absolute;
+  z-index:7;
+  pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;
+  font-family:"Space Grotesk",sans-serif;
+  font-weight:800;
+  animation:dmg-rise .9s cubic-bezier(.2,.8,.3,1) forwards;
+}
+.dmg-pop.side-a{left:130px;bottom:220px}
+.dmg-pop.side-b{right:130px;top:220px}
+.dmg-pop .dp-num{
+  font-size:56px;
+  color:#fff;
+  text-shadow:0 3px 0 #000,0 0 20px rgba(255,255,255,.4);
+  letter-spacing:-1px;
+}
+.dmg-pop.super .dp-num{color:#ffd23f;text-shadow:0 3px 0 #4a2c00,0 0 24px #ffd23f}
+.dmg-pop.weak .dp-num{color:#9aa3b2;font-size:38px}
+.dmg-pop.crit .dp-num{color:#ff4da6;font-size:72px;text-shadow:0 3px 0 #4a0022,0 0 28px #ff4da6}
+.dmg-pop .dp-crit{
+  font-size:14px;
+  color:#ff4da6;
+  letter-spacing:3px;
+  margin-top:2px;
+  text-shadow:0 0 8px #ff4da6;
+}
+@keyframes dmg-rise{
+  0%{transform:translateY(20px) scale(.3);opacity:0}
+  20%{transform:translateY(0) scale(1.2);opacity:1}
+  35%{transform:translateY(-6px) scale(1);opacity:1}
+  100%{transform:translateY(-80px) scale(.9);opacity:0}
+}
+
+.sprite-wrap{position:relative;width:200px;height:200px;display:flex;align-items:flex-end;justify-content:center}
+.fighter.enemy .sprite-wrap{width:180px;height:180px}
+.sprite-wrap .shadow{
+  position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);
+  width:70%;height:14px;border-radius:50%;
+  background:radial-gradient(ellipse, rgba(0,0,0,0.55), transparent 70%);
+  filter:blur(3px);
+}
+.sprite-wrap img{
+  position:relative;width:100%;height:100%;object-fit:contain;
+  filter:drop-shadow(0 10px 14px rgba(0,0,0,0.5));
+  animation:float 2.4s ease-in-out infinite;
+}
+.fighter.enemy .sprite-wrap img{animation-delay:-1.2s}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+.name-plate{
+  min-width:260px;padding:12px 14px;border-radius:10px;
+  border:1px solid var(--stroke-2);background:rgba(8,11,24,0.85);backdrop-filter:blur(4px);
+  box-shadow:0 8px 20px -8px rgba(0,0,0,0.8), 0 0 0 1px var(--accent, #6ae0ff)22 inset;
+}
+.np-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:6px}
+.np-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;text-transform:capitalize;color:#fff}
+.np-lv{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-dim);letter-spacing:0.15em}
+.np-types{display:flex;gap:5px;margin-top:6px}
+.np-types span{padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase}
+
+.hp-bar{display:flex;align-items:center;gap:8px}
+.hp-track{flex:1;height:10px;border-radius:6px;background:rgba(255,255,255,0.08);overflow:hidden;border:1px solid rgba(255,255,255,0.05)}
+.hp-fill{height:100%;border-radius:6px;transition:width .5s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 8px -2px currentColor}
+.hp-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink);font-weight:700;min-width:64px;text-align:right}
+.hp-num span{color:var(--ink-faint);font-weight:400}
+
+/* Victory */
+.victory{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:5;animation:fadeIn .3s}
+.victory-inner{text-align:center;padding:30px 40px;border-radius:20px;border:1px solid var(--accent);background:rgba(15,21,39,0.95);box-shadow:0 0 40px -8px var(--accent)}
+.v-kicker{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.4em;color:var(--accent);margin-bottom:10px}
+.victory-inner img{width:140px;height:140px;object-fit:contain;filter:drop-shadow(0 0 20px var(--accent))}
+.v-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:32px;text-transform:capitalize;margin:6px 0 2px}
+.v-xp{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent-3);letter-spacing:0.2em;margin-bottom:16px}
+.v-again{padding:10px 18px;border-radius:8px;border:1px solid var(--accent);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.2em;background:rgba(106,224,255,0.08)}
+.v-again:hover{background:var(--accent);color:#0a0e1a}
+
+/* Console */
+.console{display:grid;grid-template-columns:1fr 1.3fr;gap:0;height:220px}
+.log{padding:14px 18px;overflow:auto;border-right:1px solid var(--stroke);display:flex;flex-direction:column;gap:5px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.45}
+.log-line{color:var(--ink-dim);animation:logIn .25s ease}
+@keyframes logIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.log-line.k-start{color:var(--accent);font-weight:700;letter-spacing:0.08em}
+.log-line.k-move{color:var(--ink)}
+.log-line.k-crit{color:var(--accent-3);font-weight:700}
+.log-line.k-super{color:#5ef2a3}
+.log-line.k-weak{color:var(--ink-faint)}
+.log-line.k-miss{color:var(--ink-faint);font-style:italic}
+.log-line.k-faint{color:#ff6a6a;font-weight:700}
+.log-line.k-win{color:var(--accent);font-weight:700;letter-spacing:0.1em;font-size:13px}
+
+.moves-panel{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.mp-title{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.2em;color:var(--ink-dim);text-transform:uppercase}
+.move-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1}
+.move-btn{
+  padding:10px 12px;border-radius:10px;border:1px solid var(--stroke-2);background:rgba(255,255,255,0.02);
+  display:flex;flex-direction:column;gap:6px;text-align:left;transition:all .15s;cursor:pointer;
+}
+.move-btn:hover:not(:disabled){border-color:var(--mc);box-shadow:0 0 0 1px var(--mc) inset, 0 0 20px -6px var(--mc);transform:translateY(-1px)}
+.move-btn:disabled{opacity:0.45;cursor:not-allowed}
+.mb-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.mb-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;text-transform:capitalize;color:#fff}
+.mb-type{padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase}
+.mb-bot{display:flex;gap:10px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--ink-faint);text-transform:uppercase}
+.mb-cat{margin-left:auto;color:var(--mc)}
+
+/* Fight CTA */
+.fight-cta{
+  margin-top:20px;display:flex;justify-content:center;
+}
+.fight-btn{
+  padding:16px 40px;border-radius:14px;
+  border:1px solid #ff4da6;color:#fff;
+  font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;letter-spacing:0.3em;
+  background:linear-gradient(135deg, rgba(255,77,166,0.25), rgba(106,224,255,0.15));
+  box-shadow:0 0 0 1px rgba(255,77,166,0.4) inset, 0 10px 30px -8px #ff4da6, 0 0 40px -10px #6ae0ff;
+  cursor:pointer;transition:transform .15s;
+}
+.fight-btn:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 0 1px #ff4da6 inset, 0 14px 40px -8px #ff4da6, 0 0 60px -8px #6ae0ff}
+.fight-btn .fb-icon{margin-right:10px}
+
 /* Responsive */
 @media (max-width: 960px){
+  .console{grid-template-columns:1fr;height:auto}
+  .move-grid{grid-template-columns:1fr 1fr}
+  .stage{height:360px}
+  .sprite-wrap{width:140px;height:140px}
+  .fighter.enemy .sprite-wrap{width:120px;height:120px}
+  .name-plate{min-width:200px}
   .hero{grid-template-columns:1fr}
   .controls{grid-template-columns:1fr}
   .modal-head,.modal-body{grid-template-columns:1fr}
@@ -469,7 +771,7 @@ body.theme-holo .card:hover{
 
 <script>
   window.__TWEAKS__ = /*EDITMODE-BEGIN*/{
-    "theme": "holo",
+    "theme": "arcade",
     "density": "comfortable",
     "showScanlines": true,
     "particles": true
@@ -1017,6 +1319,411 @@ window.DetailModal = DetailModal;
 
 </script>
 <script type="text/babel">
+// Battle mini-game: turn-based combat between two Pokémon
+const { useState: useStateB, useEffect: useEffectB, useRef: useRefB } = React;
+
+// Type effectiveness (simplified, original matrix)
+const TYPE_EFFECT = {
+  fire:     { grass:2, ice:2, bug:2, steel:2, water:0.5, fire:0.5, rock:0.5, dragon:0.5 },
+  water:    { fire:2, ground:2, rock:2, water:0.5, grass:0.5, dragon:0.5 },
+  grass:    { water:2, ground:2, rock:2, fire:0.5, grass:0.5, flying:0.5, bug:0.5, dragon:0.5, steel:0.5, poison:0.5 },
+  electric: { water:2, flying:2, ground:0, electric:0.5, grass:0.5, dragon:0.5 },
+  ice:      { grass:2, ground:2, flying:2, dragon:2, fire:0.5, water:0.5, ice:0.5, steel:0.5 },
+  fighting: { normal:2, ice:2, rock:2, dark:2, steel:2, flying:0.5, poison:0.5, bug:0.5, psychic:0.5, fairy:0.5, ghost:0 },
+  poison:   { grass:2, fairy:2, poison:0.5, ground:0.5, rock:0.5, ghost:0.5, steel:0 },
+  ground:   { fire:2, electric:2, poison:2, rock:2, steel:2, grass:0.5, bug:0.5, flying:0 },
+  flying:   { grass:2, fighting:2, bug:2, electric:0.5, rock:0.5, steel:0.5 },
+  psychic:  { fighting:2, poison:2, psychic:0.5, steel:0.5, dark:0 },
+  bug:      { grass:2, psychic:2, dark:2, fire:0.5, fighting:0.5, poison:0.5, flying:0.5, ghost:0.5, steel:0.5, fairy:0.5 },
+  rock:     { fire:2, ice:2, flying:2, bug:2, fighting:0.5, ground:0.5, steel:0.5 },
+  ghost:    { psychic:2, ghost:2, dark:0.5, normal:0 },
+  dragon:   { dragon:2, steel:0.5, fairy:0 },
+  dark:     { psychic:2, ghost:2, fighting:0.5, dark:0.5, fairy:0.5 },
+  steel:    { ice:2, rock:2, fairy:2, fire:0.5, water:0.5, electric:0.5, steel:0.5 },
+  fairy:    { fighting:2, dragon:2, dark:2, fire:0.5, poison:0.5, steel:0.5 },
+  normal:   { rock:0.5, ghost:0, steel:0.5 },
+};
+
+function effectiveness(moveType, defenderTypes){
+  let mult = 1;
+  const em = TYPE_EFFECT[moveType];
+  if (!em) return 1;
+  defenderTypes.forEach(t => {
+    if (em[t] !== undefined) mult *= em[t];
+  });
+  return mult;
+}
+
+// Pick 4 representative moves from the pokemon
+function pickMoves(p){
+  const names = p.moves.slice(0, 10);
+  // Deterministic but varied "power" based on name length
+  const chosen = names.slice(0, 4);
+  return chosen.map((name, i) => {
+    const power = 40 + ((name.length * 7 + i * 11) % 55); // 40-95
+    const type = (p.types[i % p.types.length]) || p.types[0];
+    const category = i % 2 === 0 ? "physical" : "special";
+    const accuracy = 85 + (name.length % 15);
+    return { name, type, power, category, accuracy };
+  });
+}
+
+function calcDamage(attacker, defender, move){
+  const atk = move.category === "physical" ? attacker.stats.attack : attacker.stats["special-attack"];
+  const def = move.category === "physical" ? defender.stats.defense : defender.stats["special-defense"];
+  const level = 50;
+  const stab = attacker.types.includes(move.type) ? 1.5 : 1;
+  const eff = effectiveness(move.type, defender.types);
+  const crit = Math.random() < 0.0625 ? 2 : 1;
+  const rand = 0.85 + Math.random() * 0.15;
+  // Simplified formula
+  const base = (((2*level/5 + 2) * move.power * atk / def) / 50) + 2;
+  const dmg = Math.floor(base * stab * eff * crit * rand);
+  return { dmg: Math.max(1, dmg), eff, crit: crit === 2, stab: stab > 1 };
+}
+
+function effText(eff, lang){
+  if (eff === 0) return lang==="es" ? "¡No afecta!" : "No effect!";
+  if (eff >= 2) return lang==="es" ? "¡Es super efectivo!" : "Super effective!";
+  if (eff > 0 && eff < 1) return lang==="es" ? "No es muy efectivo…" : "Not very effective…";
+  return "";
+}
+
+function HPBar({ current, max, accent, side }){
+  const pct = Math.max(0, (current / max) * 100);
+  const color = pct > 50 ? "#5ef2a3" : pct > 20 ? "#ffd23f" : "#ff6a6a";
+  return (
+    <div className={"hp-bar side-"+side}>
+      <div className="hp-track">
+        <div className="hp-fill" style={{width: pct+"%", background:`linear-gradient(90deg, ${color}, ${color}aa)`}}/>
+      </div>
+      <div className="hp-num">{Math.ceil(current)}<span>/{max}</span></div>
+    </div>
+  );
+}
+
+function BattleArena({ a, b, onClose, lang }){
+  const t = window.I18N[lang];
+  const [hpA, setHpA] = useStateB(a.stats.hp * 2);
+  const [hpB, setHpB] = useStateB(b.stats.hp * 2);
+  const [log, setLog] = useStateB([]);
+  const [turn, setTurn] = useStateB("player"); // 'player' | 'enemy' | 'busy' | 'over'
+  const [winner, setWinner] = useStateB(null);
+  const [shakeA, setShakeA] = useStateB(false);
+  const [shakeB, setShakeB] = useStateB(false);
+  const [flashA, setFlashA] = useStateB(false);
+  const [flashB, setFlashB] = useStateB(false);
+  const [lungeA, setLungeA] = useStateB(false);
+  const [lungeB, setLungeB] = useStateB(false);
+  const [projectile, setProjectile] = useStateB(null); // {from:'a'|'b', type, kind, id}
+  const [impact, setImpact] = useStateB(null); // {side:'a'|'b', color, id}
+  const [dmgPop, setDmgPop] = useStateB(null); // {side, value, crit, id}
+
+  const maxA = a.stats.hp * 2;
+  const maxB = b.stats.hp * 2;
+
+  const movesA = useRefB(pickMoves(a)).current;
+  const movesB = useRefB(pickMoves(b)).current;
+
+  const accentA = window.TYPE_COLORS[a.types[0]] || "#6ae0ff";
+  const accentB = window.TYPE_COLORS[b.types[0]] || "#ff4da6";
+
+  const pushLog = (text, kind="info") => {
+    setLog(prev => [...prev, { text, kind, id: Date.now()+Math.random() }]);
+  };
+
+  useEffectB(() => {
+    pushLog(lang==="es"
+      ? `¡${a.name.toUpperCase()} vs ${b.name.toUpperCase()}! ¡Comienza la batalla!`
+      : `${a.name.toUpperCase()} vs ${b.name.toUpperCase()}! Battle start!`, "start");
+    // First turn based on speed
+    if (b.stats.speed > a.stats.speed){
+      setTurn("busy");
+      setTimeout(() => {
+        pushLog(lang==="es" ? `${b.name} es más rápido…` : `${b.name} is faster…`);
+        setTimeout(enemyTurn, 900);
+      }, 700);
+    }
+  }, []);
+
+  // Visual kind: contact moves lunge; projectile moves fire a bolt
+  function moveKind(move){
+    const contactTypes = ["fighting","normal","rock","ground","bug","steel"];
+    return contactTypes.includes(move.type) || move.category === "physical" && Math.random()<0.5
+      ? "contact" : "projectile";
+  }
+
+  function applyHit(targetIsB, dmg, eff, crit, stab, move, attacker){
+    const moveName = move.name || move;
+    const kind = move.type ? moveKind(move) : "projectile";
+    const mType = move.type || attacker.types[0];
+    const color = window.TYPE_COLORS[mType] || "#6ae0ff";
+
+    pushLog(lang==="es"
+      ? `${attacker.name} usa ${moveName.replace(/-/g," ").toUpperCase()}!`
+      : `${attacker.name} used ${moveName.replace(/-/g," ").toUpperCase()}!`, "move");
+
+    // Attacker animation (lunge)
+    const attackerIsA = !targetIsB;
+    if (kind === "contact"){
+      if (attackerIsA) { setLungeA(true); setTimeout(()=>setLungeA(false), 420); }
+      else { setLungeB(true); setTimeout(()=>setLungeB(false), 420); }
+    } else {
+      // Projectile
+      const pid = Date.now()+Math.random();
+      setProjectile({from: attackerIsA?"a":"b", type: mType, color, id: pid});
+      setTimeout(()=>setProjectile(p => p && p.id===pid ? null : p), 620);
+    }
+
+    // Delay impact to sync with animation
+    const impactDelay = kind === "contact" ? 240 : 560;
+    setTimeout(() => {
+      // Impact visuals on defender
+      if (targetIsB){ setShakeB(true); setFlashB(true); setTimeout(()=>{setShakeB(false);setFlashB(false);}, 450); }
+      else { setShakeA(true); setFlashA(true); setTimeout(()=>{setShakeA(false);setFlashA(false);}, 450); }
+      const iid = Date.now()+Math.random();
+      setImpact({side: targetIsB?"b":"a", color, id: iid, kind});
+      setTimeout(()=>setImpact(imp => imp && imp.id===iid ? null : imp), 500);
+
+      if (eff === 0){
+        pushLog(effText(eff, lang), "miss");
+        return;
+      }
+      if (crit) pushLog(lang==="es" ? "¡Golpe crítico!" : "Critical hit!", "crit");
+      if (eff !== 1) pushLog(effText(eff, lang), eff>1?"super":"weak");
+
+      // Damage popup
+      const did = Date.now()+Math.random();
+      setDmgPop({side: targetIsB?"b":"a", value: dmg, crit, eff, id: did});
+      setTimeout(()=>setDmgPop(d => d && d.id===did ? null : d), 900);
+
+      if (targetIsB){
+        setHpB(h => {
+          const nh = Math.max(0, h - dmg);
+          if (nh <= 0){
+            setTimeout(()=>{
+              pushLog(lang==="es" ? `¡${b.name.toUpperCase()} se debilitó!` : `${b.name.toUpperCase()} fainted!`, "faint");
+              pushLog(lang==="es" ? `¡${a.name.toUpperCase()} GANA!` : `${a.name.toUpperCase()} WINS!`, "win");
+              setWinner(a); setTurn("over");
+            }, 400);
+          }
+          return nh;
+        });
+      } else {
+        setHpA(h => {
+          const nh = Math.max(0, h - dmg);
+          if (nh <= 0){
+            setTimeout(()=>{
+              pushLog(lang==="es" ? `¡${a.name.toUpperCase()} se debilitó!` : `${a.name.toUpperCase()} fainted!`, "faint");
+              pushLog(lang==="es" ? `¡${b.name.toUpperCase()} GANA!` : `${b.name.toUpperCase()} WINS!`, "win");
+              setWinner(b); setTurn("over");
+            }, 400);
+          }
+          return nh;
+        });
+      }
+    }, impactDelay);
+    return true;
+  }
+
+  function playerAttack(move){
+    if (turn !== "player") return;
+    setTurn("busy");
+    // Accuracy check
+    if (Math.random() * 100 > move.accuracy){
+      pushLog(lang==="es" ? `${a.name} usa ${move.name.replace(/-/g," ").toUpperCase()}!` : `${a.name} used ${move.name.replace(/-/g," ").toUpperCase()}!`, "move");
+      pushLog(lang==="es" ? "¡Pero falló!" : "But it missed!", "miss");
+      setTimeout(enemyTurn, 1100);
+      return;
+    }
+    const { dmg, eff, crit, stab } = calcDamage(a, b, move);
+    applyHit(true, dmg, eff, crit, stab, move, a);
+    setTimeout(() => {
+      if (hpB - dmg <= 0) return; // battle over
+      enemyTurn();
+    }, 1700);
+  }
+
+  function enemyTurn(){
+    // AI: pick highest expected damage among moves
+    const picks = movesB.map(m => {
+      const { dmg, eff } = calcDamage(b, a, m);
+      return { m, score: dmg * (eff || 0.1) };
+    }).sort((x,y) => y.score - x.score);
+    const chosen = picks[0].m;
+
+    setTurn("busy");
+    setTimeout(() => {
+      if (Math.random() * 100 > chosen.accuracy){
+        pushLog(lang==="es" ? `${b.name} usa ${chosen.name.replace(/-/g," ").toUpperCase()}!` : `${b.name} used ${chosen.name.replace(/-/g," ").toUpperCase()}!`, "move");
+        pushLog(lang==="es" ? "¡Pero falló!" : "But it missed!", "miss");
+        setTimeout(()=>setTurn("player"), 900);
+        return;
+      }
+      const { dmg, eff, crit, stab } = calcDamage(b, a, chosen);
+      applyHit(false, dmg, eff, crit, stab, chosen, b);
+      setTimeout(()=>{
+        if (hpA - dmg <= 0) return;
+        setTurn("player");
+      }, 1700);
+    }, 800);
+  }
+
+  const logRef = useRefB(null);
+  useEffectB(()=>{
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [log]);
+
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="battle" onClick={e=>e.stopPropagation()}>
+        <button className="close battle-close" onClick={onClose} aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+        </button>
+
+        {/* Stage */}
+        <div className="stage">
+          <div className="stage-bg">
+            <div className="stage-grid"/>
+            <div className="stage-sun"/>
+          </div>
+
+          {/* Enemy (B) — top right */}
+          <div className={"fighter enemy " + (shakeB?"shake ":"") + (flashB?"flash ":"") + (lungeB?"lunge ":"")} style={{"--accent": accentB}}>
+            <div className="name-plate">
+              <div className="np-top">
+                <span className="np-name">{b.name}</span>
+                <span className="np-lv">Lv.50</span>
+              </div>
+              <HPBar current={hpB} max={maxB} accent={accentB} side="right"/>
+              <div className="np-types">
+                {b.types.map(ty => {
+                  const c = window.TYPE_COLORS[ty];
+                  return <span key={ty} style={{background:`${c}22`,border:`1px solid ${c}55`,color:c}}>{ty}</span>;
+                })}
+              </div>
+            </div>
+            <div className="sprite-wrap">
+              <div className="shadow"/>
+              <img src={b.sprite} alt={b.name} onError={(e)=>{e.target.src=b.spriteSmall}}/>
+            </div>
+          </div>
+
+          {/* Player (A) — bottom left */}
+          <div className={"fighter player " + (shakeA?"shake ":"") + (flashA?"flash ":"") + (lungeA?"lunge ":"")} style={{"--accent": accentA}}>
+            <div className="sprite-wrap">
+              <div className="shadow"/>
+              <img src={a.sprite} alt={a.name} onError={(e)=>{e.target.src=a.spriteSmall}}/>
+            </div>
+            <div className="name-plate player-plate">
+              <div className="np-top">
+                <span className="np-name">{a.name}</span>
+                <span className="np-lv">Lv.50</span>
+              </div>
+              <HPBar current={hpA} max={maxA} accent={accentA} side="left"/>
+              <div className="np-types">
+                {a.types.map(ty => {
+                  const c = window.TYPE_COLORS[ty];
+                  return <span key={ty} style={{background:`${c}22`,border:`1px solid ${c}55`,color:c}}>{ty}</span>;
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Projectile (type-colored bolt) */}
+          {projectile && (
+            <div className={"projectile from-"+projectile.from} style={{"--pc": projectile.color}}>
+              <div className="p-core"/>
+              <div className="p-trail"/>
+              <div className="p-glow"/>
+            </div>
+          )}
+
+          {/* Impact burst */}
+          {impact && (
+            <div className={"impact side-"+impact.side + " k-"+impact.kind} style={{"--ic": impact.color}}>
+              <div className="imp-ring"/>
+              <div className="imp-ring imp-ring-2"/>
+              <div className="imp-star">✦</div>
+              <div className="imp-spikes">
+                <span/><span/><span/><span/><span/><span/><span/><span/>
+              </div>
+            </div>
+          )}
+
+          {/* Damage popup */}
+          {dmgPop && (
+            <div key={dmgPop.id}
+              className={"dmg-pop side-"+dmgPop.side + (dmgPop.crit?" crit":"") + (dmgPop.eff>1?" super":dmgPop.eff<1&&dmgPop.eff>0?" weak":"")}>
+              <span className="dp-num">-{dmgPop.value}</span>
+              {dmgPop.crit && <span className="dp-crit">CRIT!</span>}
+            </div>
+          )}
+
+          {winner && (
+            <div className="victory">
+              <div className="victory-inner" style={{"--accent": window.TYPE_COLORS[winner.types[0]] || "#6ae0ff"}}>
+                <div className="v-kicker">◆ {lang==="es"?"VICTORIA":"VICTORY"} ◆</div>
+                <img src={winner.sprite} alt={winner.name} onError={(e)=>{e.target.src=winner.spriteSmall}}/>
+                <div className="v-name">{winner.name}</div>
+                <div className="v-xp">+{Math.floor((winner===a?b.base_experience:a.base_experience)||120)} EXP</div>
+                <button className="v-again" onClick={()=>{
+                  setHpA(maxA); setHpB(maxB); setLog([]); setWinner(null); setTurn("player");
+                  pushLog(lang==="es"?"¡Revancha!":"Rematch!", "start");
+                }}>{lang==="es"?"↻ REVANCHA":"↻ REMATCH"}</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom console */}
+        <div className="console">
+          <div className="log" ref={logRef}>
+            {log.map(l => (
+              <div key={l.id} className={"log-line k-"+l.kind}>{l.text}</div>
+            ))}
+          </div>
+          <div className="moves-panel">
+            <div className="mp-title">
+              {turn === "player" && `${lang==="es"?"¿Qué hará":"What will"} ${a.name.toUpperCase()} ${lang==="es"?"":"do?"}`}
+              {turn === "busy" && `${lang==="es"?"…":"…"}`}
+              {turn === "enemy" && `${b.name.toUpperCase()} ${lang==="es"?"ataca":"attacks"}…`}
+              {turn === "over" && (lang==="es"?"FIN DE BATALLA":"BATTLE OVER")}
+            </div>
+            <div className="move-grid">
+              {movesA.map((m, i) => {
+                const c = window.TYPE_COLORS[m.type];
+                const disabled = turn !== "player";
+                return (
+                  <button key={i} className="move-btn" disabled={disabled}
+                    onClick={()=>playerAttack(m)}
+                    style={{"--mc": c}}>
+                    <div className="mb-top">
+                      <span className="mb-name">{m.name.replace(/-/g," ")}</span>
+                      <span className="mb-type" style={{background:`${c}22`,color:c,border:`1px solid ${c}55`}}>{m.type}</span>
+                    </div>
+                    <div className="mb-bot">
+                      <span>PWR {m.power}</span>
+                      <span>ACC {m.accuracy}</span>
+                      <span className="mb-cat">{m.category==="physical"?"◆ FÍS":"◇ ESP"}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+window.BattleArena = BattleArena;
+
+</script>
+<script type="text/babel">
 // Compare two Pokémon side by side
 const { useState: useStateC, useMemo: useMemoC } = React;
 
@@ -1111,6 +1818,7 @@ function CompareSlot({ slot, value, onChange, allPokemon, lang }){
 function CompareView({ allPokemon, lang }){
   const [a, setA] = useStateC(null);
   const [b, setB] = useStateC(null);
+  const [fighting, setFighting] = useStateC(false);
 
   // Determine winner per stat
   const statKeys = ["hp","attack","defense","special-attack","special-defense","speed"];
@@ -1123,6 +1831,19 @@ function CompareView({ allPokemon, lang }){
         <div className="vs">VS</div>
         <CompareSlot slot="B" value={b} onChange={setB} allPokemon={allPokemon} lang={lang}/>
       </div>
+
+      {a && b && (
+        <div className="fight-cta">
+          <button className="fight-btn" onClick={()=>setFighting(true)}>
+            <span className="fb-icon">⚔</span>
+            {lang==="es" ? "¡LUCHAR!" : "FIGHT!"}
+          </button>
+        </div>
+      )}
+
+      {fighting && a && b && (
+        <window.BattleArena a={a} b={b} lang={lang} onClose={()=>setFighting(false)}/>
+      )}
 
       {a && b && (
         <div style={{
