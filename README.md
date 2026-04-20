@@ -1,6 +1,6 @@
 # Pokédex Arena
 
-**Live:** https://pokedex-area.wayna.co
+**Live:** https://pokedex-arena.wayna.co
 
 Landing page de Pokémon con estética RPG-HUD: explorador de los 151 de Gen I con búsqueda, filtros por tipo, modal de detalle con radar hexagonal animado, modo comparar, **modo batalla con animaciones (lunge, proyectiles, impactos, popups de daño y crítico)**, toggle ES/EN y 3 temas (RPG / Arcade / Holo).
 

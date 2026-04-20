@@ -1143,7 +1143,7 @@ function extractSummary(p){
     abilities: p.abilities.map(a => ({ name: a.ability.name, hidden: a.is_hidden })),
     moves: p.moves.slice(0, 24).map(m => m.move.name),
     stats,
-    sprite: p.sprites?.other?.["official-artwork"]?.front_default 
+    sprite: p.sprites?.other?.["official-artwork"]?.front_default
          || p.sprites?.front_default
          || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.id}.png`,
     spriteSmall: p.sprites?.front_default || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png`,
@@ -3671,7 +3671,7 @@ function App(){
           </div>
         </div>
         <div className="credits-foot">
-          Pokédex Arena · <a href="https://pokedex-area.wayna.co" target="_blank" rel="noopener">pokedex-area.wayna.co</a>
+          Pokédex Arena · <a href="https://pokedex-arena.wayna.co" target="_blank" rel="noopener">pokedex-area.wayna.co</a>
         </div>
       </footer>
     </div>
